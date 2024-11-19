@@ -1,0 +1,145 @@
+{
+  "name": "forward_node0_call_0",
+  "directed": true,
+  "strict": false,
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "CONST1",
+      "label": "\\N",
+      "opcode": "CONST",
+      "value": "1"
+    },
+    {
+      "_gvid": 1,
+      "name": "INPUT2",
+      "label": "\\N",
+      "offset": "0, 0",
+      "opcode": "INPUT",
+      "pattern": "4, 512",
+      "ref_name": "%arg3",
+      "size": "2048"
+    },
+    {
+      "_gvid": 2,
+      "name": "INPUT3",
+      "label": "\\N",
+      "offset": "0, 0",
+      "opcode": "INPUT",
+      "pattern": "4, 512",
+      "ref_name": "%arg4",
+      "size": "2048"
+    },
+    {
+      "_gvid": 3,
+      "name": "INPUT4",
+      "label": "\\N",
+      "offset": "0, 0",
+      "opcode": "INPUT",
+      "pattern": "4, 512",
+      "ref_name": "%arg5",
+      "size": "2048"
+    },
+    {
+      "_gvid": 4,
+      "name": "INPUT5",
+      "label": "\\N",
+      "offset": "0, 0",
+      "opcode": "INPUT",
+      "pattern": "4, 512",
+      "ref_name": "%arg6",
+      "size": "2048"
+    },
+    {
+      "_gvid": 5,
+      "name": "XOR6",
+      "label": "\\N",
+      "opcode": "XOR"
+    },
+    {
+      "_gvid": 6,
+      "name": "XOR7",
+      "label": "\\N",
+      "opcode": "XOR"
+    },
+    {
+      "_gvid": 7,
+      "name": "XOR8",
+      "label": "\\N",
+      "opcode": "XOR"
+    },
+    {
+      "_gvid": 8,
+      "name": "LSHR9",
+      "label": "\\N",
+      "opcode": "LSHR"
+    },
+    {
+      "_gvid": 9,
+      "name": "OUTPUT10",
+      "label": "\\N",
+      "offset": "0, 0",
+      "opcode": "OUTPUT",
+      "pattern": "4, 512",
+      "ref_name": "%arg7",
+      "size": "2048"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 0,
+      "head": 8,
+      "operand": "1"
+    },
+    {
+      "_gvid": 1,
+      "tail": 1,
+      "head": 5,
+      "operand": "0"
+    },
+    {
+      "_gvid": 2,
+      "tail": 2,
+      "head": 5,
+      "operand": "1"
+    },
+    {
+      "_gvid": 3,
+      "tail": 3,
+      "head": 6,
+      "operand": "0"
+    },
+    {
+      "_gvid": 4,
+      "tail": 4,
+      "head": 6,
+      "operand": "1"
+    },
+    {
+      "_gvid": 5,
+      "tail": 5,
+      "head": 7,
+      "operand": "0"
+    },
+    {
+      "_gvid": 6,
+      "tail": 6,
+      "head": 7,
+      "operand": "1"
+    },
+    {
+      "_gvid": 7,
+      "tail": 7,
+      "head": 8,
+      "operand": "0"
+    },
+    {
+      "_gvid": 8,
+      "tail": 8,
+      "head": 9,
+      "operand": "0"
+    }
+  ]
+}
