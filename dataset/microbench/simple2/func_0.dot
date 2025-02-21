@@ -1,0 +1,9 @@
+digraph  func_call_0 {
+  INPUT1 [ref_name = "%arg2", offset = "0, 0", size = 80, pattern = "4, 20", opcode = INPUT];
+  INPUT2 [ref_name = "%arg3", offset = "0, 0", size = 80, pattern = "4, 20", opcode = INPUT];
+  MUL3 [opcode = MUL];
+  OUTPUT4 [ref_name = "%arg4", offset = "0, 0", size = 80, pattern = "4, 20", opcode = OUTPUT];
+  INPUT1 -> MUL3 [operand = 0];
+  INPUT2 -> MUL3 [operand = 1];
+  MUL3 -> OUTPUT4 [operand = 0];
+}

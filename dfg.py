@@ -1,24 +1,26 @@
-
 from dfgParser import DFGParser
 
-from operations import Operation, Operations   
+from operations import Operation, Operations
+import numpy as np
+
 
 class DFGFeature:
     def __init__(self):
-        self.id = None 
-        self.topo_order = None 
+        self.id = None
+        self.topo_order = None
         self.sche_time = None
-        self.in_degree = None 
+        self.in_degree = None
         self.out_degree = None
-        self.opcode = None 
+        self.opcode = None
         self.mapped_pe_id = None
+
 
 class DFGFeatures:
     def __init__(self, dfg):
         self.features = {}
-        self.dfg = dfg 
+        self.dfg = dfg
         self.getFeatures()
-    
+
     def getFeatures(self):
         for node in self.dfg.nodes:
             feature = DFGFeature()
@@ -55,21 +57,28 @@ class DFGFeatures:
                 return node
         return None
 
-    def dfs(self, node, topo_order):
-        topo_order[node.id] = len(topo_order)
+    def dfs(self, node, topo_order, vis):
+        vis[node.id] = 1
         for edge in self.dfg.edges:
-            if edge.tail == node.id and edge.head not in topo_order:
-                tailNode = self.findNodeById( edge.head)
-                self.dfs( tailNode, topo_order)
+            if edge.tail == node.id and edge.head not in vis:
+                tailNode = self.findNodeById(edge.head)
+                self.dfs(tailNode, topo_order, vis)
+        topo_order[node.id] = len(topo_order)
 
-    def getTopoOrder(self):
+    def getTopoOrder(self, reverse=False):
         topo_order = {}
+        vis = {}
         for node in self.dfg.nodes:
-            if node.id not in topo_order and self.getInDegreeAndPredecessors(node)[0] == 0:
-                self.dfs(node, topo_order)
+            if (
+                node.id not in topo_order
+                and self.getInDegreeAndPredecessors(node)[0] == 0
+            ):
+                self.dfs(node, topo_order, vis)
+        for id, topo in topo_order.items():
+            topo_order[id] = len(self.dfg.nodes) - topo - 1
+        # if reverse:
+        #     topo_order = {v: k for k, v in topo_order.items()}
         return topo_order
-
-
 
     def getDFGFeatures(self):
         dfg_features = {}
@@ -87,20 +96,28 @@ class DFGFeatures:
         return dfg_features
 
     def getFeaturesVector(self, operations):
-        features = []
+        features = np.zeros((len(self.dfg.nodes), 7))
         dfg_features = self.getDFGFeatures()
         for id, feature in dfg_features.items():
             op = operations.name2op[feature.opcode]
-            features.append([feature.id, feature.topo_order, feature.sche_time, feature.in_degree, feature.out_degree, op, feature.mapped_pe_id])
+            features[feature.topo_order] = [
+                feature.id,
+                feature.topo_order,
+                feature.sche_time,
+                feature.in_degree,
+                feature.out_degree,
+                op,
+                feature.mapped_pe_id,
+            ]
         return features
-    
+
     def __len__(self):
         return len(self.features)
+
+
 
 # dfg_features = DFGFeatures(dfg)
 # features = []
 # for feature in dfg_features:
 #     print(feature.id, feature.topo_order, feature.sche_time, feature.in_degree, feature.out_degree, name2op[feature.opcode], feature.mapped_pe_id)
 #     features.append([feature.id, feature.topo_order, feature.sche_time, feature.in_degree, feature.out_degree, name2op[feature.opcode], feature.mapped_pe_id])
-
-    

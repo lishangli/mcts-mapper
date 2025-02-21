@@ -1,0 +1,33 @@
+digraph  func_call_0 {
+  CONST1 [value = 1, opcode = CONST];
+  CONST2 [value = 3, opcode = CONST];
+  CONST3 [value = -1, opcode = CONST];
+  CONST4 [value = 2, opcode = CONST];
+  INPUT5 [ref_name = "%arg4", offset = "0, 0", size = 36, pattern = "4, 9", opcode = INPUT];
+  ADD6 [opcode = ADD];
+  MUL7 [opcode = MUL];
+  ADD8 [opcode = ADD];
+  ADD9 [opcode = ADD];
+  MUL10 [opcode = MUL];
+  ADD11 [opcode = ADD];
+  INPUT12 [ref_name = "%arg5", offset = "0, 0", size = 0, pattern = "0, 9", opcode = INPUT];
+  ADD13 [opcode = ADD];
+  ACC14 [acc_first = 1, acc_params = "0, 9, 1, 1", opcode = ACC];
+  OUTPUT15 [ref_name = "%arg5", offset = "0, 0", size = 0, pattern = "0, 9", opcode = OUTPUT];
+  INPUT5 -> ADD6 [operand = 0];
+  CONST4 -> ADD6 [operand = 1];
+  ADD6 -> MUL7 [operand = 0];
+  ADD6 -> MUL7 [operand = 1];
+  MUL7 -> ADD8 [operand = 0];
+  ADD6 -> ADD8 [operand = 1];
+  ADD8 -> ADD9 [operand = 0];
+  CONST3 -> ADD9 [operand = 1];
+  ADD9 -> MUL10 [operand = 0];
+  CONST2 -> MUL10 [operand = 1];
+  MUL10 -> ADD11 [operand = 0];
+  CONST1 -> ADD11 [operand = 1];
+  INPUT12 -> ADD13 [operand = 0];
+  ACC14 -> ADD13 [operand = 1];
+  ADD11 -> ACC14 [operand = 0];
+  ADD13 -> OUTPUT15 [operand = 0];
+}

@@ -1,0 +1,15 @@
+Timer unit: 1e-09 s
+
+Total time: 104.921 s
+File: test.py
+Function: test at line 45
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    45                                               @profile
+    46                                               def test(self):
+    47                                                   # mapping = Mapping(self.dfg, adg,operations)
+    48         1       3328.0   3328.0      0.0          self.mapping.use_true_reward()
+    49         1        1e+11    1e+11    100.0          self.mapping.test_mapping(self.agent, is_shown=True, temp=1e-2)
+
+104.92 seconds - test.py:45 - test

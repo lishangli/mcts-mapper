@@ -1,0 +1,17 @@
+digraph  func_call_0 {
+  CONST1 [value = 20, opcode = CONST];
+  CONST2 [value = 10, opcode = CONST];
+  INPUT3 [ref_name = "%arg2", offset = "0, 4", size = 392, pattern = "4, 98", opcode = INPUT];
+  MUL4 [opcode = MUL];
+  INPUT5 [ref_name = "%arg2", offset = "0, 8", size = 396, pattern = "4, 98", opcode = INPUT];
+  MUL6 [opcode = MUL];
+  ADD7 [opcode = ADD];
+  OUTPUT8 [ref_name = "%arg3", offset = "0, 4", size = 392, pattern = "4, 98", opcode = OUTPUT];
+  INPUT3 -> MUL4 [operand = 0];
+  CONST2 -> MUL4 [operand = 1];
+  INPUT5 -> MUL6 [operand = 0];
+  CONST1 -> MUL6 [operand = 1];
+  MUL4 -> ADD7 [operand = 0];
+  MUL6 -> ADD7 [operand = 1];
+  ADD7 -> OUTPUT8 [operand = 0];
+}

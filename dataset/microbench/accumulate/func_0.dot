@@ -1,0 +1,21 @@
+digraph  func_call_0 {
+  INPUT1 [ref_name = "%arg2", offset = "0, 8", size = 396, pattern = "4, 98", opcode = INPUT];
+  INPUT2 [ref_name = "%arg3", offset = "0, 0", size = 388, pattern = "4, 98", opcode = INPUT];
+  ADD3 [opcode = ADD];
+  INPUT4 [ref_name = "%arg4", offset = "0, 4", size = 392, pattern = "4, 98", opcode = INPUT];
+  MUL5 [opcode = MUL];
+  OUTPUT6 [ref_name = "%arg4", offset = "0, 4", size = 392, pattern = "4, 98", opcode = OUTPUT];
+  INPUT7 [ref_name = "%arg5", offset = "0, 0", size = 0, pattern = "0, 98", opcode = INPUT];
+  ADD8 [opcode = ADD];
+  ACC9 [acc_first = 1, acc_params = "0, 98, 1, 1", opcode = ACC];
+  OUTPUT10 [ref_name = "%arg5", offset = "0, 0", size = 0, pattern = "0, 98", opcode = OUTPUT];
+  INPUT1 -> ADD3 [operand = 0];
+  INPUT2 -> ADD3 [operand = 1];
+  INPUT4 -> MUL5 [operand = 0];
+  ADD3 -> MUL5 [operand = 1];
+  MUL5 -> OUTPUT6 [operand = 0];
+  INPUT7 -> ADD8 [operand = 0];
+  ACC9 -> ADD8 [operand = 1];
+  MUL5 -> ACC9 [operand = 0];
+  ADD8 -> OUTPUT10 [operand = 0];
+}

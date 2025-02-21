@@ -1,0 +1,134 @@
+Timer unit: 1e-09 s
+
+Total time: 0.000639976 s
+File: /root/wafer-compiler/mapper/state.py
+Function: take_action at line 872
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   872                                               @profile
+   873                                               def take_action(self, action, print_action=False):
+   874         1       1128.0   1128.0      0.2          self.mode = "placement"
+   875         1        529.0    529.0      0.1          if print_action:
+   876                                                       print(
+   877                                                           "current action is {}, {}".format(
+   878                                                               action // self.env.adg_actions, action % self.env.adg_actions
+   879                                                           )
+   880                                                       )
+   881         1     638319.0 638319.0     99.7          if not self.env.update(action, self.reward, print_action):
+   882                                                       self.mapping_state = False
+   883                                                       self.sum_reward -= 500
+   884                                                   elif self.is_terminal() and self.env.dfg_mask.any():
+   885                                                       self.mapping_state = False
+   886                                                       self.sum_reward -= 500
+   887                                                   else:
+   888                                                       self.last_reward = self.sum_reward
+   889                                                       self.sum_reward -= self.get_distance(action)
+   890                                           
+   891                                                   self.env.last_action = action
+   892                                                   # self.sum_reward += self.reward[action]  # add reward to sum_reward
+
+Total time: 0.0185689 s
+File: /root/wafer-compiler/mapper/mcts.py
+Function: select_reward at line 139
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   139                                               @profile
+   140                                               def select_reward(self, state):
+   141         2       2660.0   1330.0      0.0          node = self.root
+   142         2        748.0    374.0      0.0          act = None
+   143         2        753.0    376.5      0.0          reward = 0
+   144         2     131505.0  65752.5      0.7          if not node.is_leaf() and not state.is_terminal():
+   145         1     933667.0 933667.0      5.0              act, node = node.best_child(self.t)
+   146         1   16827456.0    2e+07     90.6              reward = self.agent_net.reward_model(state, act)
+   147                                           
+   148         1       1616.0   1616.0      0.0              if self.mode == "placement":
+   149         1     670081.0 670081.0      3.6                  state.take_action(act)
+   150                                                       else:
+   151                                                           state.take_route_action(act)
+   152                                           
+   153         1        404.0    404.0      0.0          return act, node, reward
+
+Total time: 0.269012 s
+File: /root/wafer-compiler/mapper/mcts.py
+Function: search at line 99
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    99                                               @profile
+   100                                               def search(self, state, alpha=0.9):
+   101         2       4483.0   2241.5      0.0          reward = 0
+   102         2       3549.0   1774.5      0.0          if self.mode == "placement":
+   103         2   18608223.0    9e+06      6.9              act, node, reward = self.select_reward(state)
+   104         1  244898434.0    2e+08     91.0              action_probs, value = self.agent_net.policy_value_fn(state)
+   105                                                   else:
+   106                                                       act, node = self.select(state)
+   107                                                       alpha = 1
+   108                                                       action_probs, value = self.agent_net.route_policy_value_fn(state)
+   109                                                       ## PRINT INFO FOR ACTION_PROBS
+   110                                           
+   111         1       1837.0   1837.0      0.0          node.policy = action_probs
+   112                                           
+   113         1       1264.0   1264.0      0.0          if self.mode == "placement":
+   114         1     168548.0 168548.0      0.1              if not state.is_terminal():
+   115         1    5283050.0    5e+06      2.0                  node.expand(action_probs, state, self.mode)
+   116                                                   else:
+   117                                                       if state.is_terminal():
+   118                                                           value = state.get_reward()
+   119                                                       else:
+   120                                                           node.expand(action_probs, state, self.mode)
+   121                                                           value = value * alpha + reward
+   122         1      43004.0  43004.0      0.0          node.backpropagate(-value)
+
+Total time: 8.12992 s
+File: /root/wafer-compiler/mapper/mapping.py
+Function: test_mapping at line 128
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   128                                               @profile
+   129                                               def test_mapping(self, agent, is_shown=False, temp=1e-2):
+   130         1    8314015.0    8e+06      0.1          self.env.reset()
+   131         1  361787069.0    4e+08      4.5          self.state = MappingState(self.env)
+   132         1       1563.0   1563.0      0.0          sum_latency = 0
+   133         1        349.0    349.0      0.0          latencies = []
+   134         1   14756349.0    1e+07      0.2          g_visual = GraphVisual(self.env.dfg, self.env.adg)
+   135         1 6755794418.0    7e+09     83.1          self.state.start_anime(g_visual)
+   136                                                   while True:
+   137         1  989271220.0    1e+09     12.2              move, move_probs = agent.get_action(self.state, temp=temp, return_prob=1)
+   138                                                       if move == -1:
+   139                                                           print("cur move is -1")
+   140                                                           # if is_shown:
+   141                                                           #     self.state.draw()
+   142                                                           break
+   143                                           
+   144                                                       # print(
+   145                                                       #     "cur action is {}, {}".format(
+   146                                                       #         move // self.env.adg_actions, move % self.env.adg_actions
+   147                                                       #     )
+   148                                                       # )
+   149                                           
+   150                                                       self.state.take_action(action=move, print_action=True)
+   151                                                       self.state.mode = "route"
+   152                                                       route_buffer = self.start_route(agent)  # take routing actions
+   153                                                       self.state.mode = "placement"
+   154                                                       self.state.draw(g_visual)
+   155                                                       if route_buffer == None:
+   156                                                           continue
+   157                                                       sum_latency = self.state.get_reward()
+   158                                                       latencies.append(sum_latency)
+   159                                                       if self.state.is_terminal():
+   160                                                           if not self.state.mapping_state:
+   161                                                               print("the mapping is failed")
+   162                                                           # print("the mapping state latency is {}".format(sum_latency))
+   163                                                           # print(np.where(self.state.env.route_mask == 0)[0].shape)
+   164                                                           # print(np.where(self.state.route_mask == 0)[0].shape)
+   165                                                           if is_shown:
+   166                                                               self.state.end_anime(g_visual)
+   167                                                           return sum_latency
+
+  0.00 seconds - /root/wafer-compiler/mapper/state.py:872 - take_action
+  0.02 seconds - /root/wafer-compiler/mapper/mcts.py:139 - select_reward
+  0.27 seconds - /root/wafer-compiler/mapper/mcts.py:99 - search
+  8.13 seconds - /root/wafer-compiler/mapper/mapping.py:128 - test_mapping

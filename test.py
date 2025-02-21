@@ -1,13 +1,16 @@
 from adgParser import *
 from dfgParser import *
-from model import *
+from mcts import MCTSPlayer
+from net import AgentNetwork
 from operations import Operations
 from mapping import Mapping
 from mcts import MCTSPlayer
+from ppo import PPOPlayer
+from line_profiler import profile
 
 # 使用示例
-dfg_parser = DFGParser('dfg.json')
-adg_parser = ADGIR('cgra_adg.json')
+dfg_parser = DFGParser("./dataset/microbench/json/cap.json")
+adg_parser = ADGIR("cgra_adg.json")
 operations = Operations()
 operations.OpParser("operations.json")
 # s
@@ -17,20 +20,40 @@ adg = adg_parser.getADG()
 # state = MappingState(env)
 # state.draw()
 
+
 class MappingTest(object):
-    def __init__(self,dfg, adg, operations):
+    def __init__(self, dfg, adg, operations, model_file=None):
         self.dfg = dfg
         self.adg = adg
         self.operations = operations
-        self.mapping = Mapping(dfg, adg, operations)
+        route_size = len(self.adg.getEdges())
+        actions_len = self.adg.getNodeNums() * (self.adg.getMaxNodeId() + 1)
+        agentNet = AgentNetwork(
+            7,
+            5,
+            32,
+            actions_len,
+            route_size,
+            32,
+            use_gpu=True,
+            model_file=model_file,
+        )
+        self.agent = MCTSPlayer(agentNet)
+        self.ppo_agent = PPOPlayer(agentNet)
+        self.mapping = Mapping(dfg, adg, operations, False)
 
-    def test(self, model_file):
-        actions_len = len(self.dfg.getNodes()) * (self.adg.getMaxNodeId()+1)
-        agentNet = AgentNetwork(7, 5, 32, 3230,32,use_gpu = True, model_file=model_file)
-        agent = MCTSPlayer(agentNet)
+    # @profile
+    def test(self):
         # mapping = Mapping(self.dfg, adg,operations)
+        self.mapping.use_true_reward()
+        # self.agent.t += 1
+        latency = self.mapping.test_mapping(self.agent, is_shown=True, temp=1e-2)
+        print("test {}".format(latency))
 
-        self.mapping.test_mapping(agent, is_shown=True, temp=1e-2)
+    def ppo_test(self):
+        self.mapping.use_true_reward()
+        self.mapping.ppo_mapping(self.ppo_agent, is_shown=True)
 
-mt = MappingTest(dfg, adg, operations)
-mt.test("models/best-agent.pt")
+
+mt = MappingTest(dfg, adg, operations, "models/best-agent.pt")
+mt.test()

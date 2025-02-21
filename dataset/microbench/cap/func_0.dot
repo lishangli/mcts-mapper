@@ -1,0 +1,33 @@
+digraph  func_call_0 {
+  CONST1 [value = 2, opcode = CONST];
+  CONST2 [value = 3, opcode = CONST];
+  INPUT3 [ref_name = "%arg3", offset = "0, 32", size = 364, pattern = "4, 91", opcode = INPUT];
+  MUL4 [opcode = MUL];
+  MUL5 [opcode = MUL];
+  LSHR6 [opcode = LSHR];
+  MUL7 [opcode = MUL];
+  INPUT8 [ref_name = "%arg2", offset = "0, 32", size = 364, pattern = "4, 91", opcode = INPUT];
+  MUL9 [opcode = MUL];
+  MUL10 [opcode = MUL];
+  LSHR11 [opcode = LSHR];
+  MUL12 [opcode = MUL];
+  MUL13 [opcode = MUL];
+  OUTPUT14 [ref_name = "%arg4", offset = "0, 32", size = 364, pattern = "4, 91", opcode = OUTPUT];
+  INPUT3 -> MUL4 [operand = 0];
+  CONST2 -> MUL4 [operand = 1];
+  MUL4 -> MUL5 [operand = 0];
+  MUL5 -> LSHR6 [operand = 0];
+  CONST1 -> LSHR6 [operand = 1];
+  LSHR6 -> MUL7 [operand = 0];
+  INPUT8 -> MUL9 [operand = 0];
+  CONST2 -> MUL9 [operand = 1];
+  MUL9 -> MUL10 [operand = 0];
+  INPUT3 -> MUL10 [operand = 1];
+  MUL10 -> LSHR11 [operand = 0];
+  CONST1 -> LSHR11 [operand = 1];
+  LSHR11 -> MUL12 [operand = 0];
+  INPUT3 -> MUL12 [operand = 1];
+  MUL7 -> MUL13 [operand = 0];
+  MUL12 -> MUL13 [operand = 1];
+  MUL13 -> OUTPUT14 [operand = 0];
+}

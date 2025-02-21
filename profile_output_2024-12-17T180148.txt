@@ -1,0 +1,133 @@
+Timer unit: 1e-09 s
+
+Total time: 14.6395 s
+File: /root/wafer-compiler/mapper/mcts.py
+Function: search at line 99
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    99                                               @profile
+   100                                               def search(self, state, alpha=0.9):
+   101       396     719255.0   1816.3      0.0          reward = 0
+   102       396     590461.0   1491.1      0.0          if self.mode == "placement":
+   103       100 1492781372.0    1e+07     10.2              act, node, reward = self.select_reward(state)
+   104       100 1303194023.0    1e+07      8.9              action_probs, value = self.agent_net.policy_value_fn(state)
+   105                                                   else:
+   106       296 7723683624.0    3e+07     52.8              act, node = self.select(state)
+   107       296     293703.0    992.2      0.0              alpha = 1
+   108       296 3209902150.0    1e+07     21.9              action_probs, value = self.agent_net.route_policy_value_fn(state)
+   109                                                       ## PRINT INFO FOR ACTION_PROBS
+   110                                           
+   111       396    1012352.0   2556.4      0.0          node.policy = action_probs
+   112                                           
+   113       396     455542.0   1150.4      0.0          if self.mode == "placement":
+   114       100  107235506.0    1e+06      0.7              if not state.is_terminal():
+   115        90  136402656.0    2e+06      0.9                  node.expand(action_probs, state, self.mode)
+   116                                                   else:
+   117       296  321765669.0    1e+06      2.2              if state.is_terminal():
+   118       156     531247.0   3405.4      0.0                  value = state.get_reward()
+   119                                                       else:
+   120       140  313481239.0    2e+06      2.1                  node.expand(action_probs, state, self.mode)
+   121       140    2184058.0  15600.4      0.0                  value = value * alpha + reward
+   122       396   25288166.0  63859.0      0.2          node.backpropagate(-value)
+
+Total time: 135.463 s
+File: /root/wafer-compiler/mapper/mapping.py
+Function: start_route at line 31
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    31                                               @profile
+    32                                               def start_route(self, agent):
+    33                                                   (
+    34        10       2883.0    288.3      0.0              states,
+    35        10       3160.0    316.0      0.0              mcts_probs,
+    36        10       2863.0    286.3      0.0          ) = (
+    37        10       5952.0    595.2      0.0              [],
+    38        10       3502.0    350.2      0.0              [],
+    39                                                   )
+    40        10      12217.0   1221.7      0.0          self.state.mode = "route"
+    41        10       4324.0    432.4      0.0          route_latencies = []
+    42        10     200266.0  20026.6      0.0          route_mask = copy.deepcopy(self.state.env.route_mask)
+    43        10    1314921.0 131492.1      0.0          adg_adj = copy.deepcopy(self.state.env.adg_adj)
+    44        10     111747.0  11174.7      0.0          adg_features_vec = copy.deepcopy(self.state.env.adg_features_vec)
+    45        10      75442.0   7544.2      0.0          route_step = copy.deepcopy(self.env.route_step)
+    46                                           
+    47                                                   while True:
+    48       158        1e+11    9e+08     99.6              move, move_probs = agent.get_route_action(
+    49        79      80191.0   1015.1      0.0                  self.state, temp=1e-3, return_prob=1
+    50                                                       )
+    51                                           
+    52        79     156732.0   1983.9      0.0              states.append(self.state)
+    53        79      45123.0    571.2      0.0              mcts_probs.append(move_probs)
+    54        79      77279.0    978.2      0.0              if move < 0:
+    55         5       1550.0    310.0      0.0                  return None
+    56                                           
+    57        74     365939.0   4945.1      0.0              srcN = self.state.env.adg.getEdges()[move].getSrcId()
+    58        74     142397.0   1924.3      0.0              dstN = self.state.env.adg.getEdges()[move].getDstId()
+    59        74    2224510.0  30060.9      0.0              print("cur route action is {} to {}".format(srcN, dstN))
+    60                                           
+    61        74  379253898.0    5e+06      0.3              self.state.take_route_action(move)
+    62                                           
+    63        74     179916.0   2431.3      0.0              sum_latency = self.state.get_reward()
+    64                                           
+    65        74      55016.0    743.5      0.0              route_latencies.append(sum_latency)
+    66        74  150330428.0    2e+06      0.1              if self.state.is_terminal():
+    67                                                           # self.state.mode = "placement"
+    68                                                           # if len(self.state.env.route_cur_node) > 0:
+    69                                                           #     self.state.env.route_mask = route_mask
+    70                                                           #     self.state.adg_adj = adg_adj
+    71                                                           #     self.state.adg_features_vec = adg_features_vec
+    72                                                           #     self.route_step = route_step
+    73         5       5951.0   1190.2      0.0                  return zip(states, mcts_probs, route_latencies)
+
+Total time: 207.031 s
+File: /root/wafer-compiler/mapper/mapping.py
+Function: test_mapping at line 128
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   128                                               @profile
+   129                                               def test_mapping(self, agent, is_shown=False, temp=1e-2):
+   130         1    8641451.0    9e+06      0.0          self.env.reset()
+   131         1  375353987.0    4e+08      0.2          self.state = MappingState(self.env)
+   132         1       3605.0   3605.0      0.0          sum_latency = 0
+   133         1        380.0    380.0      0.0          latencies = []
+   134         1   15281893.0    2e+07      0.0          g_visual = GraphVisual(self.env.dfg, self.env.adg)
+   135         1 7620553801.0    8e+09      3.7          self.state.start_anime(g_visual)
+   136                                                   while True:
+   137        10        5e+10    5e+09     21.8              move, move_probs = agent.get_action(self.state, temp=temp, return_prob=1)
+   138        10      12326.0   1232.6      0.0              if move == -1:
+   139                                                           print("cur move is -1")
+   140                                                           if is_shown:
+   141                                                               self.state.draw()
+   142                                                           break
+   143                                           
+   144                                                       # print(
+   145                                                       #     "cur action is {}, {}".format(
+   146                                                       #         move // self.env.adg_actions, move % self.env.adg_actions
+   147                                                       #     )
+   148                                                       # )
+   149                                           
+   150        10   27933171.0    3e+06      0.0              self.state.take_action(action=move, print_action=True)
+   151        10      13929.0   1392.9      0.0              self.state.mode = "route"
+   152        10        1e+11    1e+10     65.4              route_buffer = self.start_route(agent)  # take routing actions
+   153        10       9911.0    991.1      0.0              self.state.mode = "placement"
+   154        10        2e+10    2e+09      8.7              self.state.draw(g_visual)
+   155        10       7580.0    758.0      0.0              if route_buffer == None:
+   156         5       1166.0    233.2      0.0                  continue
+   157         5      41416.0   8283.2      0.0              sum_latency = self.state.get_reward()
+   158         5       6402.0   1280.4      0.0              latencies.append(sum_latency)
+   159         5    2092591.0 418518.2      0.0              if self.state.is_terminal():
+   160         1        716.0    716.0      0.0                  if not self.state.mapping_state:
+   161                                                               print("the mapping is failed")
+   162                                                           # print("the mapping state latency is {}".format(sum_latency))
+   163                                                           # print(np.where(self.state.env.route_mask == 0)[0].shape)
+   164                                                           # print(np.where(self.state.route_mask == 0)[0].shape)
+   165         1        258.0    258.0      0.0                  if is_shown:
+   166         1  243107141.0    2e+08      0.1                      self.state.end_anime(g_visual)
+   167         1       1391.0   1391.0      0.0                  return sum_latency
+
+ 14.64 seconds - /root/wafer-compiler/mapper/mcts.py:99 - search
+135.46 seconds - /root/wafer-compiler/mapper/mapping.py:31 - start_route
+207.03 seconds - /root/wafer-compiler/mapper/mapping.py:128 - test_mapping
