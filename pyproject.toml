@@ -1,0 +1,14 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "MCTS-Map"
+version = "0.1.0"
+description = "A Reinforcement Learning Alogrithm based on MCTS for CGRA Mapping"
+license = "MIT"
+readme = "README.md"
+packages = []
+
+[tool.poetry.dependencies]
+python = "*"

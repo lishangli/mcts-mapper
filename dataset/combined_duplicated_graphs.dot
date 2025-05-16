@@ -1,0 +1,70 @@
+digraph combined_duplicated_graphs {
+  subgraph cluster_graph_copy_1 {
+    label = "graph_copy_1";
+    CONST1_1 [value=2, opcode=CONST];
+    CONST2_1 [value=3, opcode=CONST];
+    INPUT3_1 [ref_name="%arg3", offset="0, size=364, pattern="4, opcode=INPUT];
+    MUL4_1 [opcode=MUL];
+    MUL5_1 [opcode=MUL];
+    LSHR6_1 [opcode=LSHR];
+    MUL7_1 [opcode=MUL];
+    INPUT8_1 [ref_name="%arg2", offset="0, size=364, pattern="4, opcode=INPUT];
+    MUL9_1 [opcode=MUL];
+    MUL10_1 [opcode=MUL];
+    LSHR11_1 [opcode=LSHR];
+    MUL12_1 [opcode=MUL];
+    MUL13_1 [opcode=MUL];
+    OUTPUT14_1 [ref_name="%arg4", offset="0, size=364, pattern="4, opcode=OUTPUT];
+    INPUT3_1 -> MUL4_1 [operand=0];
+    CONST2_1 -> MUL4_1 [operand=1];
+    MUL4_1 -> MUL5_1 [operand=0];
+    MUL5_1 -> LSHR6_1 [operand=0];
+    CONST1_1 -> LSHR6_1 [operand=1];
+    LSHR6_1 -> MUL7_1 [operand=0];
+    INPUT8_1 -> MUL9_1 [operand=0];
+    CONST2_1 -> MUL9_1 [operand=1];
+    MUL9_1 -> MUL10_1 [operand=0];
+    INPUT3_1 -> MUL10_1 [operand=1];
+    MUL10_1 -> LSHR11_1 [operand=0];
+    CONST1_1 -> LSHR11_1 [operand=1];
+    LSHR11_1 -> MUL12_1 [operand=0];
+    INPUT3_1 -> MUL12_1 [operand=1];
+    MUL7_1 -> MUL13_1 [operand=0];
+    MUL12_1 -> MUL13_1 [operand=1];
+    MUL13_1 -> OUTPUT14_1 [operand=0];
+  }
+  subgraph cluster_graph_copy_2 {
+    label = "graph_copy_2";
+    CONST1_2 [value=2, opcode=CONST];
+    CONST2_2 [value=3, opcode=CONST];
+    INPUT3_2 [ref_name="%arg3", offset="0, size=364, pattern="4, opcode=INPUT];
+    MUL4_2 [opcode=MUL];
+    MUL5_2 [opcode=MUL];
+    LSHR6_2 [opcode=LSHR];
+    MUL7_2 [opcode=MUL];
+    INPUT8_2 [ref_name="%arg2", offset="0, size=364, pattern="4, opcode=INPUT];
+    MUL9_2 [opcode=MUL];
+    MUL10_2 [opcode=MUL];
+    LSHR11_2 [opcode=LSHR];
+    MUL12_2 [opcode=MUL];
+    MUL13_2 [opcode=MUL];
+    OUTPUT14_2 [ref_name="%arg4", offset="0, size=364, pattern="4, opcode=OUTPUT];
+    INPUT3_2 -> MUL4_2 [operand=0];
+    CONST2_2 -> MUL4_2 [operand=1];
+    MUL4_2 -> MUL5_2 [operand=0];
+    MUL5_2 -> LSHR6_2 [operand=0];
+    CONST1_2 -> LSHR6_2 [operand=1];
+    LSHR6_2 -> MUL7_2 [operand=0];
+    INPUT8_2 -> MUL9_2 [operand=0];
+    CONST2_2 -> MUL9_2 [operand=1];
+    MUL9_2 -> MUL10_2 [operand=0];
+    INPUT3_2 -> MUL10_2 [operand=1];
+    MUL10_2 -> LSHR11_2 [operand=0];
+    CONST1_2 -> LSHR11_2 [operand=1];
+    LSHR11_2 -> MUL12_2 [operand=0];
+    INPUT3_2 -> MUL12_2 [operand=1];
+    MUL7_2 -> MUL13_2 [operand=0];
+    MUL12_2 -> MUL13_2 [operand=1];
+    MUL13_2 -> OUTPUT14_2 [operand=0];
+  }
+}
