@@ -432,6 +432,7 @@ class ADG(Graph):
         self._cfgBits = {}
         self._nodes = {}
         self._edges = {}
+        self.path = ""
 
     def getNumGpeNodes(self):
         return self._numGpeNodes
@@ -503,6 +504,8 @@ class ADG(Graph):
         return self._edges
 
     def getNode(self, id):
+        if id not in self._nodes:
+            return None
         return self._nodes[id]
 
     def getEdge(self, id):
@@ -582,6 +585,7 @@ class ADGIR:
         with open(jsonFile) as f:
             data = json.load(f)
             self._adg = self.parseADG(data)
+            self._adg.path = jsonFile
 
     def getADG(self):
         return self._adg

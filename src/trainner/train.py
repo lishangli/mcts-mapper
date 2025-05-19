@@ -6,6 +6,7 @@ from models import AgentNetwork
 from utils import getAdgAdj
 from mapper import Mapping
 from env import MappingState
+from parser import ADGIR, Operations, ADGFeatures
 
 import torch
 import numpy as np
@@ -22,6 +23,13 @@ from typing import List, Tuple, Union
 import csv
 import os
 import matplotlib.pyplot as plt
+
+# GOLBAL SETTING
+
+adg_parser = ADGIR("../example/cgra_adg.json")
+GLOBAL_ADG = adg_parser.getADG()
+GLOBAL_OPERATIONS = Operations()
+GLOBAL_OPERATIONS.OpParser("../example/operations.json")
 
 stop_event = mp.Event()
 
@@ -45,6 +53,11 @@ def collect_data_multi(self, n_iters, dfgs, num_workers=4):
     """
 
     results = []
+    # global GLOBAL_ADG, GLOBAL_OPERATIONS
+    # print("before change global varible")
+    # GLOBAL_ADG = self.adg
+    # GLOBAL_OPERATIONS = self.operations
+    # print("after change global varible")
 
     # task = progress.add_task("collecting data...", total=len(dfgs))
     # Create a shared agent for all processes
@@ -53,18 +66,21 @@ def collect_data_multi(self, n_iters, dfgs, num_workers=4):
     state_dict = self.agent_net.agentNet.state_dict()  # This might need customization
 
     agent_config = self.agent_net.agent_config
-
+    # 定义子进程初始化函数
     for iter in range(n_iters):
         # Set up multiprocessing resources
 
-        with mp.get_context("spawn").Pool(processes=num_workers) as pool:
+        with mp.get_context("spawn").Pool(
+            processes=num_workers,
+            ) as pool:
             # Create partial function with fixed arguments
             process_func = partial(
                 process_dfg,
                 agent_net_state_dict=state_dict,
                 agent_config=agent_config,
+                adg_path = self.adg_path,
+                operations_path = self.operations_path
             )
-
             result = pool.map(process_func, dfgs)
             results.extend(result)
 
@@ -78,10 +94,16 @@ def collect_data_multi(self, n_iters, dfgs, num_workers=4):
     self.latencies.append(ave_r)
 
 
-def process_dfg(data, agent_net_state_dict, agent_config):
+def process_dfg(dfg, agent_net_state_dict, agent_config, adg_path, operations_path):
     """Process a single DFG and return the collected data"""
+    # global GLOBAL_ADG, GLOBAL_OPERATIONS
     try:
-        dfg, adg, operations = data
+        adg_parser = ADGIR(adg_path)
+    
+        operations = Operations()
+        operations.OpParser(operations_path)
+        
+        adg = adg_parser.getADG()
         mapping_task = Mapping(dfg, adg, operations)
         agent_net = AgentNetwork(**agent_config)
 
@@ -120,16 +142,14 @@ class MCTS_RL:
         self.use_gpu = torch.cuda.is_available()
         self.state_size = 32
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.adg = adg
-        self.operations = operations
+        self.adg_path = adg.path
+        self.operations_path = operations.path
         self.adg_adj = getAdgAdj(adg)
         self.adg_features = ADGFeatures(adg).getFeaturesVector()
         # self.mask = np.zeros((len(dfg.getNodes())+4, len(adg.getNodes())+30))
         self.action_size = adg.getNodeNums() * (adg.getMaxNodeId() + 1)
         self.buffer = []
         self.route_buffer = []
-        actions_len = self.action_size
-        route_size = len(adg.getEdges())
         self.route_actions_size = len(adg.getEdges())
         self.agent_net = agent_net
         # )
@@ -682,8 +702,7 @@ class MCTS_RL:
         axes[1, 4].set_title("Value Loss")
 
         plt.tight_layout()  # 自动调整子图参数，使之填充整个图像区域
-        plt.savefig("./figures/all_plots.png", dpi=600)  # 将所有子图保存到一个图片中
-        plt.savefig("./figures/all_plots.pdf") 
+        plt.savefig("../figures/all_plots.png", dpi=600)  # 将所有子图保存到一个图片中
         plt.close(fig)  # 关闭整个figure
         self.save_data_txt()
     
@@ -701,7 +720,7 @@ class MCTS_RL:
             "value_loss": self.value_loss,
         }
 
-        output_dir = "./figures/data/"
+        output_dir = "../figures/data/"
         os.makedirs(output_dir, exist_ok=True)
 
         for key, data_list in data_to_save.items():
@@ -727,7 +746,7 @@ class MCTS_RL:
             "value_loss": self.value_loss,
         }
 
-        output_dir = "./figures/data/"
+        output_dir = "../figures/data/"
         os.makedirs(output_dir, exist_ok=True)
 
         for key, data_list in data_to_save.items():
@@ -760,7 +779,7 @@ class MCTS_RL:
                     self.losses.append(loss)
                 if (i + 1) % self.check_freq == 0:
                     print(f"current batch: {i+1}")
-                    torch.save(self.agent_net.agentNet, "./models/cur-agent.pt")
+                    torch.save(self.agent_net.agentNet, "../models/cur-agent.pt")
                     # TODO: fix the policy_value function
                     cur_latency = self.policy_evaluate(test_dfg)
                     print(f"current latency: {cur_latency}")
@@ -769,14 +788,14 @@ class MCTS_RL:
                     self.pref.append(cur_latency)
                     if cur_latency < self.best_latency:
                         self.best_latency = cur_latency
-                        torch.save(self.agent_net.agentNet, "./models/best-agent.pt")
+                        torch.save(self.agent_net.agentNet, "../models/best-agent.pt")
 
                 if i % 5 == 0:
                     self.save_figures()
 
             self.save_figures()
 
-            with open("./models/mcts.pkl", "wb") as f:
+            with open("../models/mcts.pkl", "wb") as f:
                 pickle.dump(self.mcst, f)
 
         except KeyboardInterrupt:
@@ -785,7 +804,7 @@ class MCTS_RL:
     def run_ppo(self, dfgs, is_multi=False):
         """a ppo train pipeline for mapping"""
         try:
-            test_dfg = DFGParser("dfg.json").getDFG()
+            test_dfg = DFGParser("../example/dfg.json").getDFG()
 
             for i in tqdm(range(self.batch_num), position=-1):
 
@@ -805,7 +824,7 @@ class MCTS_RL:
 
                 if (i + 1) % self.check_freq == 0:
                     print(f"current batch: {i+1}")
-                    torch.save(self.agent_net.agentNet, "./models/cur-agent-ppo.pt")
+                    torch.save(self.agent_net.agentNet, "../models/cur-agent-ppo.pt")
                     # TODO: fix the policy_value function
                     cur_latency = self.policy_evaluate_ppo(test_dfg)
                     print(f"current latency: {cur_latency}")
@@ -815,7 +834,7 @@ class MCTS_RL:
                     if cur_latency < self.best_latency:
                         self.best_latency = cur_latency
                         torch.save(
-                            self.agent_net.agentNet, "./models/best-agent_ppo.pt"
+                            self.agent_net.agentNet, "../models/best-agent_ppo.pt"
                         )
 
             
@@ -823,7 +842,7 @@ class MCTS_RL:
 
             self.save_figures()
 
-            with open("./models/mcts.pkl", "wb") as f:
+            with open("../models/mcts.pkl", "wb") as f:
                 pickle.dump(self.mcst, f)
 
         except KeyboardInterrupt:

@@ -818,7 +818,7 @@ class MappingState:
 
     def get_actions(self):
         actions = []
-        # print(f"[debug] {len(self.env.place_cur_node)}")
+
         for i in self.env.place_cur_node:
             if np.any(self.mask[i, :] == 1):
                 for j in range(self.env.adg_actions):

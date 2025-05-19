@@ -6,7 +6,7 @@
 
 - ✨ Feature1, 支持前端编译器CGRA-Compiler
 - ⚙️ 特性2，使用MCTS和不同RL算法
-- 🔍 特性3，支持将映射结果转换为实际配置代码
+- 🔍 特性3，支持将映射结果转换为实际配置代码(待完善)
 
 ## 🛠️ Installation
 
@@ -21,66 +21,41 @@ pip install -r requirements.txt
 ## 项目目录
 ```text
 .
-├── GAT.py
-├── README.md
 ├── __pycache__
-├── adg.py
-├── adgParser.py
-├── cgra_adg.json
-├── cgra_call.txt
-├── cgra_compiler-0.1.0-cp38-cp38-linux_x86_64.whl
-├── cgra_compiler-0.1.1-cp38-cp38-linux_x86_64.whl
-├── cgra_compiler.whl
-├── cgra_execute.c
-├── config.json
-├── config_gen.py
-├── dataLoader.py
 ├── dataset
-├── dfg.json
-├── dfg.py
-├── dfgParser.py
-├── dfg_simple.json
-├── env.py
-├── envi.py
+│   ├── augment
+│   ├── collect_data
+│   └── microbench
+│       ├── accumulate
+│       ├── cap
+│       ├── conv2
+│       ├── conv3
+│       ├── json
+│       ├── mac
+│       ├── mac2
+│       ├── matrixmultiply
+│       ├── mults1
+│       ├── mults2
+│       ├── nomem1
+│       ├── nomem2
+│       ├── simple
+│       ├── simple2
+│       ├── sum
+│       └── two_loops
+├── example
 ├── exp_data
 ├── figures
-├── libopenh264-2.5.0-linux64.7.so.bz2
-├── loadData.py
-├── load_data.py
-├── mapping.py
-├── mcts.py
-├── model.py
-├── model_structure
-├── model_structure.png
+│   └── data
 ├── models
-├── net.py
-├── nohup.out
-├── operations.json
-├── operations.py
-├── ppo.py
-├── profile_output.lprof
-├── profile_output.txt
-├── profile_output_2024-12-17T164817.txt
-├── profile_output_2024-12-17T165234.txt
-├── profile_output_2024-12-17T180148.txt
-├── profile_output_2024-12-17T181118.txt
-├── profile_output_2024-12-17T183151.txt
-├── profile_output_2024-12-17T184059.txt
-├── profile_output_2024-12-17T184321.txt
-├── profile_output_2024-12-17T184607.txt
-├── profile_output_2024-12-17T191234.txt
-├── profile_output_2024-12-17T191506.txt
-├── profile_output_2024-12-17T191858.txt
-├── pyproject.toml
-├── state.py
-├── test.py
-├── test.py.lprof
-├── train.log
-├── train.py
-├── ttest.py
-├── utils.py
-├── videos
-└── visual.py
+├── src
+│   ├── agent
+│   ├── env
+│   ├── mapper
+│   ├── models
+│   ├── parser
+│   ├── trainner
+│   └── utils
+└── videos
 ```
 
 

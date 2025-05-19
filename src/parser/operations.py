@@ -13,6 +13,7 @@ class Operations:
     def __init__(self):
         self.operations = []
         self.name2op = {}
+        self.path = ""
 
     def addOperation(self, operation):
         self.operations.append(operation)
@@ -29,3 +30,4 @@ class Operations:
 
         self.name2op["CONST"]=len(self.name2op)
         self.name2op["const"]=len(self.name2op)
+        self.path = jsonFile
