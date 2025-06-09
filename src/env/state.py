@@ -73,20 +73,14 @@ class Environment:
     def _precompute_edge_mappings(self):
         """预计算边缘映射关系，加速后续查询"""
         edges = self.adg.getEdges()
-        edge_data = [(edge.getDstId(), edge.getSrcId(), id) for id, edge in edges.items()]
-        
-        # 存储为NumPy数组以便快速索引
-        self._edge_array = np.array(edge_data)
-        
-        # 创建从节点到边的映射
         self._src_to_edges = {}
         self._dst_to_src = {}
-        
-        for dst, src, eid in edge_data:
+        for eid, edge in edges.items():
+            src = edge.getSrcId()
+            dst = edge.getDstId()
             if src not in self._src_to_edges:
                 self._src_to_edges[src] = []
             self._src_to_edges[src].append((eid, dst))
-            
             if dst not in self._dst_to_src:
                 self._dst_to_src[dst] = []
             self._dst_to_src[dst].append((eid, src))

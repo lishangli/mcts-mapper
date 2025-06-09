@@ -87,92 +87,15 @@ class Mapping:
                 agent.reset_route_player()
                 return zip(states, mcts_probs, route_latencies, rewards, route_actions)
 
-    # @profile
-    # def start_mapping(self, agent, print_action=False):
-    #     self.env.reset()
-    #     self.state = MappingState(self.env)
-    #     self.state.mode = "placement"
-    #     policy_value_net = agent.mcts.agent_net.policy_value_fn
-    #     states, mcts_probs, current_players = [], [], []
-    #     route_states, route_mcts_probs, route_latencies = [], [], []
-
-    #     latencies, rewards, actions = [], [], []
-
-    #     step = 0
-    #     while True:
-
-    #         step = step + 1
-    #         move, move_probs = agent.get_action(self.state, temp=1e-2, return_prob=1)
-    #         # print(move_probs)
-    #         if move == -1:
-    #             print("cur move is -1")
-    #             break
-    #         # print("cur move is {}".format(move))
-    #         states.append(self.state)
-    #         mcts_probs.append(move_probs)
-    #         pre_reward = self.state.get_reward()
-
-    #         actions.append(move)
-    #         # print("pre_reward is {}".format(pre_reward))
-    #         if print_action:
-    #             print(
-    #                 "step {}, select dfg node {} on adg node {}".format(
-    #                     step, move[0], move[1]
-    #                 )
-    #             )
-
-    #         self.state.take_action(move)  # take placement action
-    #         latencies.append(pre_reward)
-    #         self.state.mode = "route"
-    #         route_buffer = self.start_route(agent)  # take routing actions
-    #         self.state.mode = "placement"
-    #         if route_buffer == None:
-    #             continue
-    #         else:
-    #             for route_state, route_probs, route_latency in route_buffer:
-    #                 route_states.append(route_state)
-    #                 route_mcts_probs.append(route_probs)
-    #                 route_latencies.append(route_latency)
-    #         # rewards.append(self.state.get_reward())
-    #         reward = self.state.get_reward() - pre_reward
-    #         rewards.append(reward)
-    #         act, next_value = policy_value_net(self.state)
-    #         print("cur latency is {}, pred latency is {}".format(self.state.get_reward(), next_value))
-    #         # latencies.append(reward + next_value)
-    #         # print("cur reward is {}".format(pre_reward - self.state.get_reward()))
-    #         if self.state.is_terminal():
-    #             agent.reset_player()
-    #             break
-
-    #     final_val = self.state.get_reward()
-    #     reversed_latencies = [final_val - latency for latency in latencies]
-    #     reversed_route_latencies = [
-    #         final_val - route_latency for route_latency in route_latencies
-    #     ]
-    #     print(latencies)
-    #     print(route_latencies)
-    #     # for route_latency in route_latencies:
-    #     #     route_latency = final_val - route_latency
-
-    #     # for latency in latencies:
-    #     #     print("latency is {}".format(latency))
-    #     # for route_latency in route_latencies:
-    #     #     print("route_latency is {}".format(route_latency))
-    #     if self.state.mapping_state:
-    #         print("the mapping is success")
-    #     return (
-    #         self.state.get_reward(),
-    #         zip(states, mcts_probs, reversed_latencies, rewards, actions),
-    #         zip(route_states, route_mcts_probs, reversed_route_latencies),
-    #     )
 
     def compute_gae(self, values, rewards, gamma=0.99, lam=0.99):
         advantages = np.zeros_like(rewards, dtype = np.float32)
         last_advantage = 0
         next_values = np.append(values[1:], [0])
+        print(f"[compute_gae] next values is {next_values}")
         for t in reversed(range(len(rewards))):
             delta = rewards[t] + gamma * next_values[t] - values[t]
-            # print(f"delta is {delta} and reward is {rewards[t]}, and next value is {next_values[t]} and cur value is {values[t]}")
+            print(f"[compute_gae] delta is {delta} and reward is {rewards[t]}, and next value is {next_values[t]} and cur value is {values[t]}")
             advantages[t] = delta + gamma * lam * last_advantage
             last_advantage = advantages[t]
         
@@ -361,6 +284,14 @@ class Mapping:
 
     @profile
     def test_mapping(self, agent, is_shown=False, temp=1e-2):
+        """ Test the mapping process with a given agent.
+        Args:
+            agent: The agent to use for mapping
+            is_shown: Boolean flag to control visualization
+        Returns:
+            int: The final latency after mapping
+        """
+        # Initialize environment and state
         self.env.reset()
         self.state = MappingState(self.env)
         sum_latency = 0
@@ -368,22 +299,13 @@ class Mapping:
         g_visual = GraphVisual(self.env.dfg, self.env.adg)
         self.state.start_anime(g_visual)
         policy_value_net = agent.mcts.agent_net.policy_value_fn_pure
-        print("2")
         while True:
-            print("4")
             move, move_probs, q, v = agent.get_action(self.state, return_prob=True)
-            print("5")
             if move == -1:
                 print("cur move is -1")
                 if is_shown:
                     self.state.end_anime(g_visual)
                 break
-            print("3")
-            # print(
-            #     "cur action is {}, {}".format(
-            #         move // self.env.adg_actions, move % self.env.adg_actions
-            #     )
-            # )
             cur_state = copy.deepcopy(self.state)
             self.state.take_action(action=move, print_action=True)
             self.state.mode = "route"
@@ -402,9 +324,6 @@ class Mapping:
             if self.state.is_terminal():
                 if not self.state.mapping_state:
                     print("the mapping is failed")
-                # print("the mapping state latency is {}".format(sum_latency))
-                # print(np.where(self.state.env.route_mask == 0)[0].shape)
-                # print(np.where(self.state.route_mask == 0)[0].shape)
                 self.state.dump_config()
                 if is_shown:
                     self.state.end_anime(g_visual)
@@ -523,13 +442,7 @@ class Mapping:
         advantages, values_target = self.compute_gae(values, rewards)
         route_advantages, route_values_target = self.compute_gae(route_values, route_rewards)
         reversed_value = [self.state.get_reward() - latency for latency in latencies]
-        # print(f"rev value is {reversed_value}, gae value is {values_target}")
-        # # reversed_route_values = [
-        #     self.state.get_reward() - route_value for route_value in route_values
-        # ]
-        # print(f"a2")
-        # print(type(advantages))
-        # print(type(route_advantages))
+
         placement_data = list(zip(states, ppo_probs, values_target, advantages, actions))
         routing_data = list(
             zip(
@@ -595,7 +508,7 @@ class Mapping:
             probs_, value = policy_value_net(cur_state)
             grpo_probs.append(probs)
             # values.append(value)
-            print(f"pred val is {value}, reward is {reward}")
+            print(f"[grpo]pred val is {value}, value is {v}")
             if route_buffer == None:                    
                 continue
             else:
@@ -620,18 +533,14 @@ class Mapping:
         # print(f"a1")
         reversed_value = [self.state.get_reward() - latency for latency in latencies]
 
-        advantages, values_target = self.compute_grpo_gae(values,qs, rewards)
-        for rv, vt, vs,a, p in zip(reversed_value, values_target, values, advantages, grpo_probs):
-            print(f"mc value is {rv} and av value is {vt}, mcts value is {vs}. a is {a}")
-            print(f"probs is {p[p>0]}")
+        # advantages, values_target = self.compute_grpo_gae(values,qs, rewards)
+        advantages, values_target = self.compute_gae(values, rewards)
+        # for rv, vt, vs,a, p in zip(reversed_value, values_target, values, advantages, grpo_probs):
+        #     print(f"mc value is {rv} and av value is {vt}, mcts value is {vs}. a is {a}")
+        #     print(f"probs is {p[p>0]}")
+        print(f"[grpo] advantages is {advantages}, values_target is {values_target}, origin values is {values}")
         route_advantages, route_values_target = self.compute_gae(route_values, route_rewards)
-        # print(f"rev value is {reversed_value}, gae value is {values_target}")
-        # # reversed_route_values = [
-        #     self.state.get_reward() - route_value for route_value in route_values
-        # ]
-        # print(f"a2")
-        # print(type(advantages))
-        # print(type(route_advantages))
+
         placement_data = list(zip(states, grpo_probs, values_target, advantages, actions))
         routing_data = list(
             zip(
@@ -642,11 +551,11 @@ class Mapping:
                 route_actions,
             )
         )
-        # print(f"data size is {len(states)}, route data size is {len(route_states)}")
-        # print(f"a3")
         return self.state.get_reward(), placement_data, routing_data
 
     def grpo_mappingv2(self, agent, print_action=False, max_steps=1000):
+        """ A version for grpo algorithm. """
+        """ This version is used mcts advatanages under a preant node to update policy model."""
         self.env.reset()
 
         self.state = MappingState(self.env)
@@ -694,7 +603,7 @@ class Mapping:
             sum_latency = self.state.get_reward()
             reward = sum_latency - pre_reward
             rewards.append(reward)
-            if len(avts) == 10:
+            if len(avts) == 20:
                 advantages.append(avts)
             values.append(agent.mcts.root.q)
 
@@ -721,15 +630,14 @@ class Mapping:
             if self.state.mapping_state:
                 print("The mapping is successful")
         # print(f"a1")
-        reversed_value = [self.state.get_reward() - latency for latency in latencies]
+        # reversed_value = [self.state.get_reward() - latency for latency in latencies]
 
-        # advantages, values_target = self.compute_grpo_gae(values,qs, rewards)
+        # advantages, values_target = self.compute_grpo_gae(values, qs, rewards)
         # for rv, vt, vs,a, p in zip(reversed_value, values_target, values, advantages, grpo_probs):
         #     print(f"mc value is {rv} and av value is {vt}, mcts value is {vs}. a is {a}")
         #     print(f"probs is {p[p>0]}")
         route_advantages, route_values_target = self.compute_gae(route_values, route_rewards)
-        
-        placement_data = list(zip(states, grpo_probs, reversed_value, advantages, actions))
+        placement_data = list(zip(states, grpo_probs, values, advantages, actions))
         routing_data = list(
             zip(
                 route_states,

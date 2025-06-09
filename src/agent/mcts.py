@@ -11,11 +11,12 @@ def softmax(x):
     return e_x / e_x.sum()
 
 class MCTNode:
-    def __init__(self, prob, distance, parent=None):
+    """MCTS Node definition"""
+    def __init__(self, prob, distance,discount=0.99, parent=None):
         # self.state = state
         self.parent = parent
         self.children = {}
-        self.visits = 1
+        self.visits = 0
         self.value = 0
         self.p = prob
         self.u = 0
@@ -23,39 +24,36 @@ class MCTNode:
         self.v = distance
         self.h = 1 / (distance + 1)  # heuristic value
         self.policy = None
-        self.reward = 1
-        self.discount = 0.99
-    
-    # def __hash__(self):
-    #     return id(self)  # 使用对象地址作为哈希
-
-    # def __eq__(self, other):
-    #     return self is other  # 比较地址是否相同
+        self.reward = 0
+        self.discount = discount
 
     def is_fully_expanded(self, state):
-
+        """check if the node is fully expanded"""
         return len(self.children) >= len(state.get_actions()) or self.children == {}
 
     def is_leaf(self):
+        """check if the node is leaf node"""
         return self.children == {}
 
-    def best_child(self, t, c_param=0.05):
+    def best_child(self, t, c_param=4):
+        """select the best child node based on UCB1"""
         # print("children nums: {}".format(len(self.children)))
         qa_std = np.std([child.q + self.discount * child.reward for a, child in self.children.items()])
         # print(f"std is {qa_std}")
         return max(self.children.items(), key=lambda x: x[1].get_value(c_param, qa_std))
 
     def get_value(self, c_param, t=1):
+        """calculate the value of the node"""
         alpha = math.sqrt(self.parent.visits) / (1 + self.visits)
 
-        mcts_p = (self.visits+1e-8) / self.parent.visits
-        kl = mcts_p * np.log(mcts_p/self.p)
+        # mcts_p = (self.visits+1e-8) / self.parent.visits
+        # kl = mcts_p * np.log(mcts_p/self.p)
 
         self.u = self.p * alpha * c_param + (self.q + self.discount * self.reward) #W- kl
         return self.u
  
     def expand(self, action_probs, state, mode):
-        # tried_actions = [child.state.last_action for action, child in self.children.items()]
+        """expand the node with the given action probabilities"""
         if mode == "placement":
             legal_actions = state.get_actions()
         else:
@@ -68,7 +66,7 @@ class MCTNode:
                     distance = state.get_distance(action)
                 else:
                     distance = state.get_route_distance(action)
-                child = MCTNode(prob, distance, self)
+                child = MCTNode(prob, distance,self.discount, self)
                 self.children[action] = child
 
     def expandv1(self, action_probs, state, mode, top_n=5):
@@ -77,10 +75,8 @@ class MCTNode:
         else:
             legal_actions = state.get_route_actions()
 
-        # 根据概率对 action_probs 进行排序 (降序)
         sorted_action_probs = sorted(action_probs, key=lambda item: item[1], reverse=True)
 
-        # 选择概率最高的 top_n 个动作进行拓展
         actions_to_expand = sorted_action_probs[:top_n]
 
         for action, prob in actions_to_expand:
@@ -90,15 +86,16 @@ class MCTNode:
                     distance = state.get_distance(action)
                 else:
                     distance = state.get_route_distance(action)
-                child = MCTNode(prob, distance, self)
+                child = MCTNode(prob, distance,self.discount, self)
                 self.children[action] = child
 
-    def expandv2(self, action_probs, state, mode, top_n=10):
+    def expandv2(self, action_probs, state, mode, top_n=20):
+        # Select top_n actions with the smallest distance for expansion
         if mode == "placement":
             legal_actions = state.get_actions()
         else:
             legal_actions = state.get_route_actions()
-        # 创建一个列表来存储 (action, distance) 对
+
         action_distances = []
         for action, prob in action_probs:
             if action in legal_actions and action not in self.children:
@@ -109,10 +106,8 @@ class MCTNode:
                     distance = state.get_route_distance(action)
                 action_distances.append((action, distance , prob)) # 同时保存 action 和 distance
 
-        # 根据 distance 对 action_distances 列表进行排序 (升序，因为我们想要距离小的优先)
         sorted_action_distances = sorted(action_distances, key=lambda item: item[1])
 
-        # 选择距离最小的 top_n 个动作进行拓展
         actions_to_expand = sorted_action_distances[:top_n]
 
         total_prob = sum([prob for _, _, prob in actions_to_expand])
@@ -120,7 +115,7 @@ class MCTNode:
         prob_model = []
         for action, distance, prob in actions_to_expand:
             prob_model.append(prob/total_prob)
-            child = MCTNode(prob/total_prob, self.value, self)
+            child = MCTNode(prob/total_prob, self.value, self.discount, self)
             self.children[action] = child
         # print(f"prob net out is {prob_model}")
 
@@ -132,7 +127,6 @@ class MCTNode:
             act, node = self.best_child(t=0)
             current_state.take_action(act)
 
-        ## print("sim finish")
         if current_state.is_route_success():
             print("route success")
         return current_state.get_reward()
@@ -160,7 +154,7 @@ class MCTNode:
         """update q using advantages"""
 
         if self.parent:
-            delta = self.reward + self.discount * self.q - self.parent.q
+            delta = self.reward + self.discount * self.value - self.parent.value
             new_advantages = delta + self.discount * advanatges
             self.parent.backprogagate_gae(new_advantages)
 
@@ -171,6 +165,7 @@ class MCTNode:
 
 
 class MCTS:
+    """Monte Carlo Tree Search"""
     def __init__(self, agent_net, t=0, mode="placement"):
         self.root = MCTNode(1.0, 1)
         self.agent_net = agent_net
@@ -178,6 +173,8 @@ class MCTS:
         self.mode = mode
         self.t = math.exp(-t)
         self.states = {}
+        self.discount = 0.99
+        self.c_param = 4
 
     def step(self, t):
         self.t = 1/(1+math.exp(-t+10))
@@ -192,7 +189,6 @@ class MCTS:
             act, node = self.select(state)
             alpha = 1
             action_probs, value = self.agent_net.route_policy_value_fn(state)
-            ## PRINT INFO FOR ACTION_PROBS
 
         # node.policy = action_probs
         node.value = value
@@ -218,19 +214,18 @@ class MCTS:
         act = None
         
         while not node.is_leaf() and not state.is_terminal():
-            # print("route select ...")
             cur_latency = state.get_reward()
             act, node = node.best_child(self.t)
-            ### node {node.reward, node.terminal, }
 
             if self.mode == "placement":
                 state.take_action(act)
                 if not self.route_process(state):
                     state.sum_reward -= 10
+                    node.reward = state.get_reward() - cur_latency
                     break
             else:
                 state.take_route_action(act)
-                
+               
 
             node.reward = state.get_reward() - cur_latency
         return act, node
@@ -286,15 +281,11 @@ class MCTS:
         return advantages
 
     def get_advantagesv2(self):
-        values = [node.q + node.reward for act, node in self.root.children.items()]
-        average_value = sum(values) / len(values) if values else 0
-        advantages = [node.q + node.reward - average_value for act, node in self.root.children.items()]
+        # values = [node.q + node.reward for act, node in self.root.children.items()]
+        # average_value = sum(values) / len(values) if values else 0
+        advantages = [node.q + node.reward - self.root.q for act, node in self.root.children.items()]
         return advantages
     
-    # def get_root_advantages(self) -> List[float]:
-    #     print([child.q - self.root.q for key, child in self.root.children.items()])
-    #     return [child.q - self.root.q for key, child in self.root.children.items()]
-
     def update_with_move(self, last_move):
         """update mcts root with last move"""
         if last_move in self.root.children:
@@ -305,7 +296,7 @@ class MCTS:
 
 
 class place_MCTNode(MCTNode):
-
+    """A MCT Node placement"""
     def get_value(self, c_param, t):
         alpha = math.sqrt(self.parent.visits) / (1 + self.visits)
         self.u = (self.p * (1 - t) + self.h) * c_param * alpha + (self.q + 500) * (
@@ -325,6 +316,7 @@ class place_MCTNode(MCTNode):
 
 
 class route_MCTNode(MCTNode):
+    """A MCT Node for route"""
     def get_value(self, c_param, t):
         alpha = math.sqrt(self.parent.visits) / (1 + self.visits)
         self.u = self.h * alpha
@@ -376,12 +368,13 @@ class MCTSPlayer(object):
     
     @profile
     def get_action(self, state, temp=1e-3, return_prob=0, method="random"):
+        """A default get placement actions"""
         actions = state.get_actions()
         action_probs = np.zeros(
             state.env.adg.getNodeNums() * len(state.env.adg_features_vec)
         )
         if len(actions) > 0:
-            acts, probs = self.mcts.get_move_probs(state, 50)  ## 10000 iters
+            acts, probs = self.mcts.get_move_probs(state, 10)  ## 10000 iters
             if acts == None:
                 return -1, None
             action_probs[list(acts)] = probs
@@ -392,16 +385,16 @@ class MCTSPlayer(object):
             else:
                 action = np.random.choice(
                     acts,
-                    p=0.95 * probs
-                    + 0.05 * np.random.dirichlet(0.3 * np.ones(len(probs))),
+                    p=1.0 * probs
+                    + 0.0 * np.random.dirichlet(0.3 * np.ones(len(probs))),
                 )
                 # print("action is {}".format(action))
-            print(f"children q values is {[child.q + child.reward for child in self.mcts.root.children.values()]}")
-           
+            print(f"[get_action] children q values is {[child.q + child.reward for child in self.mcts.root.children.values()]}")
+            r =  self.mcts.root.reward
             self.mcts.update_with_move(action)
             q = 0.99*self.mcts.root.q +  self.mcts.root.reward
-            print(f"self.mcts.root.reward is {self.mcts.root.reward}")
-            print(f"v is {v} and qn is {self.mcts.root.q}, q is {q}, root u is {self.mcts.root.u - v}")
+            print(f"[get_action] self.mcts.root.reward is {r}")
+            print(f"[get_action] v is {v} and qn is {self.mcts.root.q}, q is {q}, root age is {q - v}")
 
             if return_prob:
                 return action, action_probs, q, v
@@ -412,6 +405,7 @@ class MCTSPlayer(object):
             return -1, None, None
         
     def get_actionv2(self, state, temp=1e-3, return_prob=0, method="random"):
+        """Another function version  to get placement actions"""
         actions = state.get_actions()
         action_probs = np.zeros(
             state.env.adg.getNodeNums() * len(state.env.adg_features_vec)
@@ -447,6 +441,7 @@ class MCTSPlayer(object):
 
     @profile
     def get_route_action(self, state, temp=1e-3, return_prob=0):
+        """A function to get route action using A star alogorithm"""
         actions = state.get_route_actions()
         # print("route actions len {}".format(len(actions)))
         action_probs = np.zeros(len(state.env.adg.getEdges()))
@@ -474,6 +469,7 @@ class MCTSPlayer(object):
             return -2, None
 
     def get_ppo_action(self, state, return_prob=True, method="random"):
+        """A function to get placement action using PPO Alogorithm"""
         actions = state.get_actions()
         actions_probs = np.zeros(
             state.env.adg.getNodeNums() * len(state.env.adg_features_vec)
@@ -539,6 +535,7 @@ class MCTSPlayer(object):
             return -2, None
         
     def get_h_action(self, state, return_prob=True, method="random"):
+        """A function to get placement action using distance-prior algorithm"""
         actions = state.get_actions()
         actions_probs = np.zeros(
             state.env.adg.getNodeNums() * len(state.env.adg_features_vec)
@@ -578,6 +575,7 @@ class MCTSPlayer(object):
             return -2, None
         
     def get_h_action_r(self, state, return_prob=True, method="random"):
+        """A function to get route action using distance-prior algorithm"""
         actions = state.get_route_actions()
         action_probs = np.zeros(len(state.env.adg.getEdges()))
         if len(actions) > 0:

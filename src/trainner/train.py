@@ -116,6 +116,7 @@ def process_dfg(dfg, agent_net_state_dict, agent_config, adg_path, operations_pa
         agent_net.agentNet.to("cpu")  # 将模型移动到 CPU
         del agent_net  # 删除模型对象
         torch.cuda.empty_cache()  # 清空 CUDA 缓存
+        print(f"latency is {latency}, data is {data}, route_data is {route_data}")
         return latency, data, route_data
 
         # return []
@@ -126,24 +127,26 @@ def process_dfg(dfg, agent_net_state_dict, agent_config, adg_path, operations_pa
 
 class MCTS_RL:
     # init
-    def __init__(self, adg, operations, agent_net):
+    def __init__(self, adg, operations, agent_net, config):
         """some parameters for training"""
-        self.batch_num = 800
-        self.batch_size = 64
-        self.kl_targ = 0.1
-        self.route_kl_targ = 0.1                                                   
-        self.check_freq = 5
-        self.target_latency = 100
-        self.best_latency = 1000
-        self.lr_multiplier = 1.0
-        self.route_lr_multiplier = 1.0
-        self.learn_rate = 3e-4
-        self.epoches = 50
+        self.batch_num = config.batch_num
+        self.batch_size = config.batch_size
+        self.kl_targ = config.kl_targ
+        self.route_kl_targ = config.route_kl_targ                                              
+        self.check_freq = config.check_freq
+        self.target_latency = config.target_latency
+        self.best_latency = config.best_latency
+        self.lr_multiplier = config.lr_multiplier
+        self.route_lr_multiplier = config.route_lr_multiplier
+        self.learn_rate = config.learn_rate
+        self.epoches = config.epoches
         self.use_gpu = torch.cuda.is_available()
-        self.state_size = 32
+        self.state_size = config.state_size
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.adg_path = adg.path
+        self.adg = adg
         self.operations_path = operations.path
+        self.operations = operations
         self.adg_adj = getAdgAdj(adg)
         self.adg_features = ADGFeatures(adg).getFeaturesVector()
         # self.mask = np.zeros((len(dfg.getNodes())+4, len(adg.getNodes())+30))
@@ -424,8 +427,8 @@ class MCTS_RL:
         ])
         mcts_probs_batch = np.array([data[1] for data in mini_batch])
         value_batch = np.array([data[2] for data in mini_batch])
-        for data in mini_batch:
-            print(f"shape size is {len(data[3])}")
+        # for data in mini_batch:
+        #     print(f"shape size is {len(data[3])}")
         advantages_batch = np.array([data[3] for data in mini_batch])
         action_batch = np.array([data[4] for data in mini_batch])
 

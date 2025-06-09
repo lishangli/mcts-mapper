@@ -1,28 +1,32 @@
-# 📦 HMapZero
-
-一个基于MCTS-RL的CGRA映射算法项目
+# 📦 MCTS-MAP
+A CGRA Mapping Algorithm Project Based on MCTS-RL
 
 ## 🚀 Features
+✨ Feature 1: Supports front-end compiler CGRA-Compiler
 
-- ✨ Feature1, 支持前端编译器CGRA-Compiler
-- ⚙️ 特性2，使用MCTS和不同RL算法
-- 🔍 特性3，支持将映射结果转换为实际配置代码(待完善)
+⚙️ Feature 2: Utilizes MCTS and various RL algorithms
+
+🔍 Feature 3: Supports conversion of mapping results to actual configuration code (to be refined)
+
+## 🔧ToDO
+
+- [ ] Fix some real hardware configuration errors 
+- [ ] Add stronger strategy for routing and placement
 
 ## 🛠️ Installation
 
-### 使用 CGRA-Mapper backend
-🚀安装后端cgra_compiler-0.1.1-cp38-cp38-linux_x86_64.whl
+### Install CGRA-Mapper backend
+🚀Install back-end package 'cgra_compiler-0.1.1-cp38-cp38-linux_x86_64.whl'
 
-### 安装依赖
+### Dependencies Install
 ```bash
 pip install -r requirements.txt
 ```
 
-## 项目目录
+## Project Structure
 ```text
 .
-├── __pycache__
-├── dataset
+├── dataset 		# Dataset 
 │   ├── augment
 │   ├── collect_data
 │   └── microbench
@@ -42,18 +46,18 @@ pip install -r requirements.txt
 │       ├── simple2
 │       ├── sum
 │       └── two_loops
-├── example
+├── example 		# Some toy examles
 ├── exp_data
-├── figures
+├── figures			# training figures
 │   └── data
 ├── models
-├── src
-│   ├── agent
-│   ├── env
-│   ├── mapper
-│   ├── models
-│   ├── parser
-│   ├── trainner
+├── src 			# core code
+│   ├── agent		# MCTS agent
+│   ├── env			# environment
+│   ├── mapper		# CGRA mapper
+│   ├── models		# Network models
+│   ├── parser		# JSON Parser
+│   ├── trainner#	# train class
 │   └── utils
 └── videos
 ```

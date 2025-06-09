@@ -1,8 +1,5 @@
-# ###
-
 from cgra_compiler_python import *
 
-# a = ADG()
 ops = Operations.Instance("operations.json")
 air = ADGIR("cgra_adg.json")
 dir = DFGIR("dfg.json")
