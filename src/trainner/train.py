@@ -33,8 +33,9 @@ GLOBAL_OPERATIONS.OpParser("../example/operations.json")
 
 stop_event = mp.Event()
 
+
 class ProcessData:
-    def __init__(self,adg, dfg, ops):
+    def __init__(self, adg, dfg, ops):
         self.adg = adg
         self.dfg = dfg
         self.ops = ops
@@ -72,14 +73,14 @@ def collect_data_multi(self, n_iters, dfgs, num_workers=4):
 
         with mp.get_context("spawn").Pool(
             processes=num_workers,
-            ) as pool:
+        ) as pool:
             # Create partial function with fixed arguments
             process_func = partial(
                 process_dfg,
                 agent_net_state_dict=state_dict,
                 agent_config=agent_config,
-                adg_path = self.adg_path,
-                operations_path = self.operations_path
+                adg_path=self.adg_path,
+                operations_path=self.operations_path,
             )
             result = pool.map(process_func, dfgs)
             results.extend(result)
@@ -89,7 +90,7 @@ def collect_data_multi(self, n_iters, dfgs, num_workers=4):
     for r, data, route_data in results:
         self.buffer.extend(data)
         self.route_buffer.extend(route_data)
-        ave_r += r 
+        ave_r += r
 
     self.latencies.append(ave_r)
 
@@ -99,10 +100,10 @@ def process_dfg(dfg, agent_net_state_dict, agent_config, adg_path, operations_pa
     # global GLOBAL_ADG, GLOBAL_OPERATIONS
     try:
         adg_parser = ADGIR(adg_path)
-    
+
         operations = Operations()
         operations.OpParser(operations_path)
-        
+
         adg = adg_parser.getADG()
         mapping_task = Mapping(dfg, adg, operations)
         agent_net = AgentNetwork(**agent_config)
@@ -132,7 +133,7 @@ class MCTS_RL:
         self.batch_num = config.batch_num
         self.batch_size = config.batch_size
         self.kl_targ = config.kl_targ
-        self.route_kl_targ = config.route_kl_targ                                              
+        self.route_kl_targ = config.route_kl_targ
         self.check_freq = config.check_freq
         self.target_latency = config.target_latency
         self.best_latency = config.best_latency
@@ -334,7 +335,7 @@ class MCTS_RL:
         self.buffer = []
         self.route_buffer = []
 
-    def collect_ppo_data(self, n_iters,dfgs, progress, task):
+    def collect_ppo_data(self, n_iters, dfgs, progress, task):
         for dfg in dfgs:
             for iter in range(n_iters):
                 progress.update(task, advance=1)
@@ -352,7 +353,7 @@ class MCTS_RL:
             for i in [1, 2, 3, 4]:
                 equi_data.append((self.get_equi_state(state, i), prob, reward))
         return equi_data
-    
+
     def get_equi_state(self, state, i):
         """"""
         raise NotImplementedError("No implement process_data error!")
@@ -374,46 +375,47 @@ class MCTS_RL:
 
     def batch_forward(self, policy_value, states, masks, sub_batch=64):
         """分批次进行前向传播
-        
+
         Args:
             policy_value (callable): 返回(old_probs, old_v)的函数
             states (Tensor): 完整状态张量 [N, state_dim]
             masks (Tensor): 完整掩码张量 [N, ...]
             sub_batch (int): 子批次大小
-            
+
         Returns:
             (old_probs, old_v): 拼接后的完整结果
         """
         old_probs_list = []
         old_v_list = []
-        
+
         total_size = len(masks)
 
-        
         # 禁用梯度计算以节省显存
         with torch.no_grad():
             for start in range(0, total_size, sub_batch):
                 end = min(start + sub_batch, total_size)
-                
+
                 # 提取子批次
                 sub_states = tuple(arr[start:end] for arr in states)
                 sub_masks = masks[start:end] if masks is not None else None
                 # 前向传播
                 sub_probs, sub_v = policy_value(sub_states, sub_masks)
-                
+
                 # 结果收集
                 old_probs_list.append(sub_probs)
                 old_v_list.append(sub_v)
-        
+
         # 拼接结果
-        return np.concatenate(old_probs_list, axis=0), np.concatenate(old_v_list, axis=0)
+        return np.concatenate(old_probs_list, axis=0), np.concatenate(
+            old_v_list, axis=0
+        )
 
     def policy_update(self, is_ppo=False):
         """update the policy-value network using"""
         # print("buffer data: {}".format(self.buffer))
-        buffer_list = list(self.buffer) # 转换为列表以便shuffle
-        random.shuffle(buffer_list) # 混洗数据
-        buffers = buffer_list # 更新 buffer (如果需要保持 buffer 类型)
+        buffer_list = list(self.buffer)  # 转换为列表以便shuffle
+        random.shuffle(buffer_list)  # 混洗数据
+        buffers = buffer_list  # 更新 buffer (如果需要保持 buffer 类型)
         mini_batch = random.sample(buffers, self.batch_size)
         # print("mini batch is {}".format(mini_batch))
         state_batch = [data[0] for data in mini_batch]
@@ -421,10 +423,14 @@ class MCTS_RL:
             batch_state=state_batch, device=self.device
         )
         # batch_mask = np.array([(np.zeros_like(state.env.mask)[legal_action]=1 )for state in state_batch])
-        batch_mask = np.array([
-            np.where(np.isin(np.arange(state.env.mask.size), state.get_actions()), 1,0)
-            for state in state_batch     
-        ])
+        batch_mask = np.array(
+            [
+                np.where(
+                    np.isin(np.arange(state.env.mask.size), state.get_actions()), 1, 0
+                )
+                for state in state_batch
+            ]
+        )
         mcts_probs_batch = np.array([data[1] for data in mini_batch])
         value_batch = np.array([data[2] for data in mini_batch])
         # for data in mini_batch:
@@ -476,11 +482,9 @@ class MCTS_RL:
             if kl > self.kl_targ * 4:
                 break
 
-            if i+1 == self.epoches:
-                self.kl_targ*=0.99
+            if i + 1 == self.epoches:
+                self.kl_targ *= 0.99
             #     tqdm.write(f"{i}-th kl targ is {self.kl_targ}")
-        
-
 
         if kl > self.kl_targ * 2 and self.lr_multiplier > 0.1:
             self.lr_multiplier /= 1.5
@@ -531,10 +535,18 @@ class MCTS_RL:
             batch_state=state_batch, device=self.device
         )
         # batch_mask = np.array([state.env.route_mask.flatten() for state in state_batch])
-        batch_mask = np.array([
-            np.where(np.isin(np.arange(state.env.route_mask.size), state.get_route_actions()), 1, 0)
-            for state in state_batch
-            ])
+        batch_mask = np.array(
+            [
+                np.where(
+                    np.isin(
+                        np.arange(state.env.route_mask.size), state.get_route_actions()
+                    ),
+                    1,
+                    0,
+                )
+                for state in state_batch
+            ]
+        )
 
         # print("state_batch: {}".format(state_batch))
         probs_batch = np.array([data[1] for data in mini_batch])
@@ -549,7 +561,9 @@ class MCTS_RL:
 
         old_probs, old_v = policy_value(batch_state, batch_mask)
         # old_probs = np.exp(old_probs)
-        print(f"old probs is {old_probs[old_probs>0]}, collect probs is {probs_batch[probs_batch>0]}")
+        print(
+            f"old probs is {old_probs[old_probs>0]}, collect probs is {probs_batch[probs_batch>0]}"
+        )
         old_v = old_v
 
         train_route_step = self.agent_net.train_route_step
@@ -636,7 +650,7 @@ class MCTS_RL:
             latency, data, route_data = mapping_task.start_mapping(current_mcts_agent)
             sum_latency -= latency
         return sum_latency / n_epoches
-    
+
     def policy_evaluate_ppo(self, test_dfg, n_epoches=1):
         current_ppo_agent = MCTSPlayer(self.agent_net, 10)
         sum_latency = 0
@@ -690,7 +704,7 @@ class MCTS_RL:
         axes[1, 1].set_title("Route Policy Loss")
 
         # 绘制 route value_loss
-        axes[1, 2].plot(self.latencies, marker='*')
+        axes[1, 2].plot(self.latencies, marker="*")
         axes[1, 2].set_ylabel("all_latencies")
         axes[1, 2].set_title("all latencies")
 
@@ -708,7 +722,7 @@ class MCTS_RL:
         plt.savefig("../figures/all_plots.png", dpi=600)  # 将所有子图保存到一个图片中
         plt.close(fig)  # 关闭整个figure
         self.save_data_txt()
-    
+
     def save_data(self):
         data_to_save = {
             "loss": self.losses,
@@ -728,13 +742,13 @@ class MCTS_RL:
 
         for key, data_list in data_to_save.items():
             filename = os.path.join(output_dir, f"{key}.csv")
-            with open(filename, 'w', newline='') as csvfile:
+            with open(filename, "w", newline="") as csvfile:
                 writer = csv.writer(csvfile)
                 writer.writerow([key])  # 标题行
                 for item in data_list:
                     writer.writerow([item])
             print(f"数据 '{key}' 已保存到 {filename}")
-    
+
     def save_data_txt(self):
         data_to_save = {
             "loss": self.losses,
@@ -757,7 +771,7 @@ class MCTS_RL:
             data_array = np.array(data_list)
 
             # 保存为一列的文本文件
-            np.savetxt(filename, data_array, delimiter=',', header=key, comments='')
+            np.savetxt(filename, data_array, delimiter=",", header=key, comments="")
             print(f"数据 '{key}' 已使用 numpy.savetxt 保存到 {filename}")
 
     def run(self, dfgs, is_multi=False):
@@ -840,7 +854,6 @@ class MCTS_RL:
                             self.agent_net.agentNet, "../models/best-agent_ppo.pt"
                         )
 
-            
                 self.save_figures()
 
             self.save_figures()

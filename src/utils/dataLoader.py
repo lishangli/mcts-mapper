@@ -3,6 +3,7 @@ import os
 import torch
 from torch.utils.data import Dataset
 
+
 class JSONDataset(Dataset):
     def __init__(self, json_dir, ops, transform=None):
         """
@@ -12,9 +13,8 @@ class JSONDataset(Dataset):
         """
         self.json_dir = json_dir
         self.operations = ops
-        self.json_files = [f for f in os.listdir(json_dir) if f.endswith('.json')]
+        self.json_files = [f for f in os.listdir(json_dir) if f.endswith(".json")]
         self.transform = transform
-        
 
     def __len__(self):
         """返回数据集大小"""
@@ -30,16 +30,13 @@ class JSONDataset(Dataset):
         # 加载 JSON 文件
         # with open(json_path, 'r') as f:
         #     data = json.load(f)
-        
+
         # # 假设数据是 {'input': [...], 'label': ...}
         # input_data = torch.tensor(data['input'], dtype=torch.float32)
         # label = torch.tensor(data['label'], dtype=torch.long)
-        
+
         # # 如果有预处理 transform，应用到输入数据
         # if self.transform:
         #     input_data = self.transform(input_data)
-        
-        return {
-            'dfg':dfg,
-            'features': data
-        }
+
+        return {"dfg": dfg, "features": data}

@@ -92,95 +92,99 @@ class Environment:
         if action not in edges:
             print("action is not in adg edges")
             return False
-            
+
         edge = edges[action]
         inN = edge.getSrcId()
         outN = edge.getDstId()
-        
+
         # 2. 验证路由条件
         if not self.route_cur_node:  # 空集检查更高效
             print("route cur node is empty")
             return True
-            
+
         if inN not in self.route_cur_node:
             print("inN is not equal to route_cur_node")
             return False
-            
+
         if self.route_mask[action] <= 0:
             print("action can not be mapped")
             return False
-        
+
         # 3. 执行路由更新 - 通用部分
         self.route_cur_node.remove(inN)
         reward = self.get_delay(outN)
-        
+
         # 设置标志以避免重复条件评估
         is_terminal = outN == self.last_action % self.adg_actions
         self.latency[outN] = max(self.latency[inN] + 1, self.latency[outN])
         self.route_cur_edges[outN] = self.route_cur_edges[inN]
         self.latency[inN] = 0
-        
+
         # 4. 根据是否为终点节点执行不同的更新
         if not is_terminal:
             # 中间节点处理 - 使用预计算的映射
             self.route_cur_node.append(outN)
 
             # latency[outN] = max(laterncy[inN] + 1, latency[outN])
-            # latency[inN] = 0 
-            
+            # latency[inN] = 0
+
             # 获取与outN相关的出边
             if outN in self._src_to_edges:
                 out_edges_data = self._src_to_edges[outN]
-                valid_out_edges = [eid for eid, _ in out_edges_data if self.route_mask[eid] >= 0]
-                
+                valid_out_edges = [
+                    eid for eid, _ in out_edges_data if self.route_mask[eid] >= 0
+                ]
+
                 # 向量化更新route_mask和adg_adj
                 self.route_mask[valid_out_edges] = 1
                 for eid, dst in out_edges_data:
                     if eid in valid_out_edges:
                         self.adg_adj[outN, dst] = 1
-            
+
             # 获取与inN相关的出边
             if inN in self._src_to_edges:
                 in_edges_data = self._src_to_edges[inN]
-                valid_in_edges = [eid for eid, _ in in_edges_data if self.route_mask[eid] >= 0]
-                
+                valid_in_edges = [
+                    eid for eid, _ in in_edges_data if self.route_mask[eid] >= 0
+                ]
+
                 # 向量化更新
                 self.route_mask[valid_in_edges] = 0
                 for eid, dst in in_edges_data:
                     if eid in valid_in_edges:
                         self.adg_adj[inN, dst] = 0
-            
+
             # 获取指向inN的边
             if inN in self._dst_to_src:
                 reversed_edges_data = self._dst_to_src[inN]
-                valid_reversed_edges = [eid for eid, _ in reversed_edges_data if self.route_mask[eid] >= 0]
-                
+                valid_reversed_edges = [
+                    eid for eid, _ in reversed_edges_data if self.route_mask[eid] >= 0
+                ]
+
                 # 向量化更新
                 self.route_mask[valid_reversed_edges] = 0
                 for eid, src in reversed_edges_data:
                     if eid in valid_reversed_edges:
                         self.adg_adj[src, inN] = 0
-            
+
             # 验证节点类型 - 只在必要时调用
             if self.adg.getNode(outN).getType() != "GIB":
                 print("{} not GIB\n".format(outN))
                 return False
-                
+
             # 最后更新当前路由状态
             self.route_step += 1
             self.adg_features_vec[outN][4] = outN
         else:
             # save the final latency for terminal dst node.
-            self.dfg_latency[self.last_action // self.adg_actions] = self.latency[outN] 
-            
-        
+            self.dfg_latency[self.last_action // self.adg_actions] = self.latency[outN]
+
         # 共同的最终更新 - 不管是终点还是中间节点
         self.adg_adj[inN, outN] = 0
         self.dfg_links[self.route_cur_edges[outN]].append(action)
         self.route_mask[action] = -1
-        
-        return True
 
+        return True
 
     def init_mask(self):
         """
@@ -575,7 +579,9 @@ class Environment:
         self.last_action = action
 
         # Find predecessor adg nodes that need routing
-        predecessor_nodes, predecessor_dfg_nodes = self.find_predecessor_nodes(dfg_node_id)
+        predecessor_nodes, predecessor_dfg_nodes = self.find_predecessor_nodes(
+            dfg_node_id
+        )
 
         # Find successor dfg nodes that need placing
         successor_nodes = self.find_successors_nodes(dfg_node_id)
@@ -585,8 +591,8 @@ class Environment:
         # Update routing nodes if predecessors exist
         if predecessor_nodes:
             self.route_cur_node = predecessor_nodes
-            for pre, pre_node in zip(predecessor_dfg_nodes,predecessor_nodes):
-                eid = self.dfg.findEdge(pre,dfg_node_id)
+            for pre, pre_node in zip(predecessor_dfg_nodes, predecessor_nodes):
+                eid = self.dfg.findEdge(pre, dfg_node_id)
                 self.route_cur_edges[pre_node] = eid
             edges = self.adg.getEdges()
             src_ids, edge_ids = np.array(
@@ -702,7 +708,7 @@ class Environment:
             int: DFG node ID
         """
         return action // self.adg_actions
-    
+
     def get_key(self):
         """env key for mcts state cache"""
         return self.dfg_features_vec.tobytes()
@@ -755,7 +761,10 @@ class MappingState:
         for dfg_id in [
             node.getId()
             for node in self.env.dfg.getNodes()
-            if node.getOpCode() == "INPUT" or node.getOpCode() == "OUTPUT" or node.getOpCode() == "input" or node.getOpCode() == "output"
+            if node.getOpCode() == "INPUT"
+            or node.getOpCode() == "OUTPUT"
+            or node.getOpCode() == "input"
+            or node.getOpCode() == "output"
         ]:
             for adg_id in [
                 node.getId()
@@ -767,7 +776,10 @@ class MappingState:
         for dfg_id in [
             node.getId()
             for node in self.env.dfg.getNodes()
-            if node.getOpCode() != "INPUT" and node.getOpCode() != "OUTPUT" and node.getOpCode() != "input" and node.getOpCode() != "output"
+            if node.getOpCode() != "INPUT"
+            and node.getOpCode() != "OUTPUT"
+            and node.getOpCode() != "input"
+            and node.getOpCode() != "output"
         ]:
             for adg_id in [
                 node.getId()
@@ -856,8 +868,8 @@ class MappingState:
             distances = [self.get_route_distance(action) for action in actions]
             weights = np.exp(-4 * np.array(distances))
             # weights = 1 / (np.array(distances)**4 + 1e-5)
-            
-            probs =  weights / np.sum(weights)
+
+            probs = weights / np.sum(weights)
             # action_probs[actions] = probs
             if method == "greedy":
                 action = actions[np.argmax(probs)]
@@ -977,14 +989,14 @@ class MappingState:
         if not self.env.update(action, self.reward, print_action):
             self.mapping_state = False
             self.sum_reward -= 10
-        elif (
-            self.is_terminal() and (self.env.dfg_mask.any() or np.all(self.mask>0))
+        elif self.is_terminal() and (
+            self.env.dfg_mask.any() or np.all(self.mask > 0)
         ):  # FIXME: here condition state is not ture for all case!
             self.mapping_state = False
             self.sum_reward -= 10
         else:
             self.last_reward = self.sum_reward
-            self.sum_reward +=  1
+            self.sum_reward += 1
 
         self.env.last_action = action
         self.actions = self.get_actions()
@@ -1063,7 +1075,6 @@ class MappingState:
         dfg_edge_attrs = {}
         adg_node_attrs = {}
 
-
         # get dfg node attr
         for node in self.env.dfg.getNodes():
             id = node.id
@@ -1071,7 +1082,7 @@ class MappingState:
                 "minLat": self.env.dfg_latency[id],
                 "maxLat": self.env.dfg_latency[id],
                 "lat": self.env.dfg_latency[id],
-                "adgNode": int(self.env.dfg_features_vec[id][6])
+                "adgNode": int(self.env.dfg_features_vec[id][6]),
             }
 
         for edge in self.env.dfg.getEdges():
@@ -1081,7 +1092,7 @@ class MappingState:
             # adg_dst_id = self.env.adg_features.vec[dstId][6]
             lat = self.env.dfg_latency[dstId] - self.env.dfg_latency[srcId]
 
-            # 
+            #
             edge_links = []
             edge_link_attrs = defaultdict(dict)
             for e in self.env.dfg_links[id]:
@@ -1090,14 +1101,14 @@ class MappingState:
                 dst_port = adg_e.getDstPortIdx()
                 dst_id = adg_e.getDstId()
                 src_id = adg_e.getSrcId()
-                edge_link_attrs[src_id]["dstPort"] = src_port 
+                edge_link_attrs[src_id]["dstPort"] = src_port
                 edge_link_attrs[dst_id]["srcPort"] = dst_port
 
             dfg_edge_attrs[id] = {
                 "lat": 0,
                 "delay": lat,
                 "vio": 0,
-                "edgeLinks": edge_link_attrs
+                "edgeLinks": edge_link_attrs,
             }
 
         # ADG Node Attr
@@ -1105,13 +1116,13 @@ class MappingState:
             in_ports = {}
             out_ports = {}
             for eid, edge in self.env.adg.getEdges().items():
-                if (edge.getDstId() == id):
+                if edge.getDstId() == id:
                     in_ports[edge.getDstPortIdx()] = True
-                if (edge.getSrcId() == id):
+                if edge.getSrcId() == id:
                     out_ports[edge.getSrcPortIdx()] = True
 
             adg_node_attrs[id] = {
-                "dfgNode": int(self.env.adg_features_vec[id][4]) + 1, # dfgNode
+                "dfgNode": int(self.env.adg_features_vec[id][4]) + 1,  # dfgNode
                 "inPortUsed": in_ports,
                 "outPortUesed": out_ports,
             }
@@ -1119,9 +1130,8 @@ class MappingState:
         config = {
             "dfg_node_attrs": dfg_node_attrs,
             "dfg_edge_attrs": dfg_edge_attrs,
-            "adg_node_attrs": adg_node_attrs
+            "adg_node_attrs": adg_node_attrs,
         }
 
         with open(config_path, "w") as f:
             json.dump(config, f, indent=4)
-

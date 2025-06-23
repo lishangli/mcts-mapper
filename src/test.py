@@ -53,10 +53,10 @@ class MappingTest(object):
 
     def ppo_test(self):
         self.mapping.use_true_reward()
-        latency =  self.mapping.ppo_mapping(self.agent, is_shown=True)
+        latency = self.mapping.ppo_mapping(self.agent, is_shown=True)
         print("test {}".format(latency))
 
 
-if __name__ ==  "__main__":
+if __name__ == "__main__":
     mt = MappingTest(dfg, adg, operations, "models/best-agent.pt")
     mt.test()

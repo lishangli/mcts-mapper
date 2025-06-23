@@ -27,6 +27,4 @@ def getAdgAdj(adg):
         adj[src, dest] = 1
         adj[dest, src] = 1
         cnt += 1
-    # print(cnt)
-    # print(len(edges))
     return adj

@@ -1,4 +1,3 @@
-
 import numpy as np
 
 
@@ -80,7 +79,7 @@ class DFGFeatures:
     def dfs(self, node, topo_order, vis):
         # Mark node as visited (using 1 for visiting, 2 for visited)
         vis[node.id] = 1
-        
+
         # Visit all neighbors
         for edge in self.dfg.edges:
             if edge.tail == node.id:
@@ -93,7 +92,7 @@ class DFGFeatures:
                 elif vis[head_id] == 1:
                     # You might want to handle cycles here
                     pass
-        
+
         # Mark as completely visited and add to order
         vis[node.id] = 2
         # Insert at the beginning of topo_order (this gives reverse topological order directly)
@@ -102,30 +101,30 @@ class DFGFeatures:
     def getTopoOrder(self, reverse=False):
         topo_order = []  # Use a list for efficiency instead of dictionary
         vis = {}  # Track visited nodes
-        
+
         # Find all nodes with in-degree 0 (precompute in-degrees)
         in_degrees = {}
         for node in self.dfg.nodes:
             in_degrees[node.id] = 0
-        
+
         for edge in self.dfg.edges:
             if edge.head in in_degrees:
                 in_degrees[edge.head] += 1
-        
+
         # Start DFS from nodes with in-degree 0
         for node in self.dfg.nodes:
             if node.id not in vis and in_degrees[node.id] == 0:
                 self.dfs(node, topo_order, vis)
-        
+
         # Any unvisited nodes (could happen in disconnected graph)
         for node in self.dfg.nodes:
             if node.id not in vis:
                 self.dfs(node, topo_order, vis)
-        
+
         # Handle reverse parameter properly
         if reverse:
             topo_order.reverse()
-        
+
         # Convert to dictionary with indices for compatibility
         topo_dict = {node_id: idx for idx, node_id in enumerate(topo_order)}
         return topo_dict

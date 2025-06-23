@@ -7,7 +7,6 @@ import matplotlib.animation as animation
 import numpy as np
 
 
-
 class GraphVisual:
     def __init__(self, dfg, adg):
         self.dfg_graph = nx.Graph(name=dfg.name)

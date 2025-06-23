@@ -125,12 +125,12 @@ class DFG:
 
     def getEdges(self):
         return self.edges
-    
+
     def findEdge(self, src, dst) -> int:
         for edge in self.edges:
             if edge.tail == src and edge.head == dst:
                 return edge.id
-        return  -1
+        return -1
 
     def getDFG(self):
         return self
@@ -147,7 +147,7 @@ class DFG:
 
     def __iter__(self):
         return iter(self.nodes + self.edges)
-    
+
     def __reduce__(self):
         """
         Defines how DFG objects should be pickled.

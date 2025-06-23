@@ -1,6 +1,10 @@
 import json
+
+
 class Operation:
-    def __init__(self, name, commutative, latency, accumulative, numOperands, numRes, OPC):
+    def __init__(
+        self, name, commutative, latency, accumulative, numOperands, numRes, OPC
+    ):
         self.name = name
         self.commutative = commutative
         self.latency = latency
@@ -8,6 +12,7 @@ class Operation:
         self.numOperands = numOperands
         self.numRes = numRes
         self.OPC = OPC
+
 
 class Operations:
     def __init__(self):
@@ -25,9 +30,17 @@ class Operations:
         with open(jsonFile) as f:
             data = json.load(f)
         for op in data["Operations"]:
-            operation = Operation(op["name"], op["commutative"], op["latency"], op["accumulative"], op["numOperands"], op['numRes'], op["OPC"])
+            operation = Operation(
+                op["name"],
+                op["commutative"],
+                op["latency"],
+                op["accumulative"],
+                op["numOperands"],
+                op["numRes"],
+                op["OPC"],
+            )
             self.addOperation(operation)
 
-        self.name2op["CONST"]=len(self.name2op)
-        self.name2op["const"]=len(self.name2op)
+        self.name2op["CONST"] = len(self.name2op)
+        self.name2op["const"] = len(self.name2op)
         self.path = jsonFile

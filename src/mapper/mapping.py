@@ -51,15 +51,13 @@ class Mapping:
 
         while step < max_step:
             step = step + 1
-            move, move_probs = agent.get_h_action_r(
-                self.state, return_prob=1
-            )
+            move, move_probs = agent.get_h_action_r(self.state, return_prob=1)
 
             if move == -1:
                 return None
             elif move == -2:
                 self.state.sum_reward -= 500
-                return  None
+                return None
 
             cur_state = copy.deepcopy(self.state)
             states.append(cur_state)
@@ -87,38 +85,39 @@ class Mapping:
                 agent.reset_route_player()
                 return zip(states, mcts_probs, route_latencies, rewards, route_actions)
 
-
     def compute_gae(self, values, rewards, gamma=0.99, lam=0.99):
-        advantages = np.zeros_like(rewards, dtype = np.float32)
+        advantages = np.zeros_like(rewards, dtype=np.float32)
         last_advantage = 0
         next_values = np.append(values[1:], [0])
         print(f"[compute_gae] next values is {next_values}")
         for t in reversed(range(len(rewards))):
             delta = rewards[t] + gamma * next_values[t] - values[t]
-            print(f"[compute_gae] delta is {delta} and reward is {rewards[t]}, and next value is {next_values[t]} and cur value is {values[t]}")
+            print(
+                f"[compute_gae] delta is {delta} and reward is {rewards[t]}, and next value is {next_values[t]} and cur value is {values[t]}"
+            )
             advantages[t] = delta + gamma * lam * last_advantage
             last_advantage = advantages[t]
-        
+
         value_target = [advantages[i] + values[i] for i in range(len(advantages))]
 
         return advantages.tolist(), value_target
-    
-    def compute_grpo_gae(self, values, qvalues,rewards, gamma=0.99, lam=0.99):
-        advantages = np.zeros_like(qvalues, dtype = np.float32)
+
+    def compute_grpo_gae(self, values, qvalues, rewards, gamma=0.99, lam=0.99):
+        advantages = np.zeros_like(qvalues, dtype=np.float32)
         last_advantage = 0
         next_values = np.append(values[1:], [0])
-        mcv = np.zeros_like(qvalues, dtype = np.float32)
-        v=0
+        mcv = np.zeros_like(qvalues, dtype=np.float32)
+        v = 0
         for t in reversed(range(len(qvalues))):
             delta = qvalues[t] - values[t]
             advantages[t] = delta + gamma * lam * last_advantage
             last_advantage = advantages[t]
-            
+
             v *= gamma
             v += rewards[t]
             mcv[t] = v
             # print(f"delta is {delta} and gae is {advantages[t]}, mcv is {mcv[t]}, values is {values[t]} ")
-        
+
         value_target = [mcv[i] for i in range(len(advantages))]
 
         return advantages.tolist(), value_target
@@ -162,7 +161,7 @@ class Mapping:
 
                 # Get action from agent
                 try:
-                    move, move_probs, q= get_action(self.state, return_prob=1)
+                    move, move_probs, q = get_action(self.state, return_prob=1)
                 except Exception as e:
                     print(f"Error getting action: {e}")
                     break
@@ -284,7 +283,7 @@ class Mapping:
 
     @profile
     def test_mapping(self, agent, is_shown=False, temp=1e-2):
-        """ Test the mapping process with a given agent.
+        """Test the mapping process with a given agent.
         Args:
             agent: The agent to use for mapping
             is_shown: Boolean flag to control visualization
@@ -316,7 +315,9 @@ class Mapping:
             act, next_value = policy_value_net(cur_state)
             reward = self.state.get_reward() - cur_state.get_reward()
             print(
-                "cur latency is {}, pred latency is {}, reward is {}".format(sum_latency, next_value, reward)
+                "cur latency is {}, pred latency is {}, reward is {}".format(
+                    sum_latency, next_value, reward
+                )
             )
             if route_buffer == None:
                 continue
@@ -407,7 +408,7 @@ class Mapping:
             latencies.append(pre_reward)
 
             self.state.take_action(action=act)
-           
+
             self.state.mode = "route"
             route_buffer = self.start_route(agent)
             self.state.mode = "placement"
@@ -417,7 +418,7 @@ class Mapping:
             probs, value = policy_value_net(cur_state)
             values.append(value)
             # print(f"pred val is {value}, reward is {reward}")
-            if route_buffer == None:                    
+            if route_buffer == None:
                 continue
             else:
                 for (
@@ -440,10 +441,14 @@ class Mapping:
                 print("The mapping is successful")
         # print(f"a1")
         advantages, values_target = self.compute_gae(values, rewards)
-        route_advantages, route_values_target = self.compute_gae(route_values, route_rewards)
+        route_advantages, route_values_target = self.compute_gae(
+            route_values, route_rewards
+        )
         reversed_value = [self.state.get_reward() - latency for latency in latencies]
 
-        placement_data = list(zip(states, ppo_probs, values_target, advantages, actions))
+        placement_data = list(
+            zip(states, ppo_probs, values_target, advantages, actions)
+        )
         routing_data = list(
             zip(
                 route_states,
@@ -463,22 +468,35 @@ class Mapping:
         self.state = MappingState(self.env)
         self.state.mode = "placement"
         step, sum_latency = 0, 0
-        rewards, values, actions, latencies, states, grpo_probs,qs = [], [], [], [], [], [],[]
+        rewards, values, actions, latencies, states, grpo_probs, qs = (
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+        )
 
-        route_states, route_grpo_probs, route_values, route_rewards, route_actions = [], [], [], [], []
+        route_states, route_grpo_probs, route_values, route_rewards, route_actions = (
+            [],
+            [],
+            [],
+            [],
+            [],
+        )
 
         step = 0
         policy_value_net = agent.mcts.agent_net.policy_value_fn_pure
 
         while step < max_steps:
-            step += 1 
+            step += 1
 
             try:
-                act, probs, q,v = agent.get_action(self.state, return_prob=True)
+                act, probs, q, v = agent.get_action(self.state, return_prob=True)
             except Exception as e:
                 print(f"Error getting action: {e}")
                 break
-
 
             # Check if agent returned invalid move
             if act == -1:
@@ -489,14 +507,14 @@ class Mapping:
             # Record pre-action state
             cur_state = copy.deepcopy(self.state)
             states.append(cur_state)
-           
+
             # print(f"ppo probs is {probs}")
             pre_reward = self.state.get_reward()
             actions.append(act)
             latencies.append(pre_reward)
 
             self.state.take_action(action=act)
-           
+
             self.state.mode = "route"
             route_buffer = self.start_route(agent)
             self.state.mode = "placement"
@@ -509,7 +527,7 @@ class Mapping:
             grpo_probs.append(probs)
             # values.append(value)
             print(f"[grpo]pred val is {value}, value is {v}")
-            if route_buffer == None:                    
+            if route_buffer == None:
                 continue
             else:
                 for (
@@ -538,10 +556,16 @@ class Mapping:
         # for rv, vt, vs,a, p in zip(reversed_value, values_target, values, advantages, grpo_probs):
         #     print(f"mc value is {rv} and av value is {vt}, mcts value is {vs}. a is {a}")
         #     print(f"probs is {p[p>0]}")
-        print(f"[grpo] advantages is {advantages}, values_target is {values_target}, origin values is {values}")
-        route_advantages, route_values_target = self.compute_gae(route_values, route_rewards)
+        print(
+            f"[grpo] advantages is {advantages}, values_target is {values_target}, origin values is {values}"
+        )
+        route_advantages, route_values_target = self.compute_gae(
+            route_values, route_rewards
+        )
 
-        placement_data = list(zip(states, grpo_probs, values_target, advantages, actions))
+        placement_data = list(
+            zip(states, grpo_probs, values_target, advantages, actions)
+        )
         routing_data = list(
             zip(
                 route_states,
@@ -554,29 +578,44 @@ class Mapping:
         return self.state.get_reward(), placement_data, routing_data
 
     def grpo_mappingv2(self, agent, print_action=False, max_steps=1000):
-        """ A version for grpo algorithm. """
+        """A version for grpo algorithm."""
         """ This version is used mcts advatanages under a preant node to update policy model."""
         self.env.reset()
 
         self.state = MappingState(self.env)
         self.state.mode = "placement"
         step, sum_latency = 0, 0
-        rewards, values, actions, latencies, states, grpo_probs,qs = [], [], [], [], [], [],[]
+        rewards, values, actions, latencies, states, grpo_probs, qs = (
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+        )
         advantages = []
-        route_states, route_grpo_probs, route_values, route_rewards, route_actions = [], [], [], [], []
+        route_states, route_grpo_probs, route_values, route_rewards, route_actions = (
+            [],
+            [],
+            [],
+            [],
+            [],
+        )
 
         step = 0
         policy_value_net = agent.mcts.agent_net.policy_value_fn_pure
 
         while step < max_steps:
-            step += 1 
+            step += 1
 
             try:
-                act, acts, probs, avts= agent.get_actionv2(self.state, return_prob=True)
+                act, acts, probs, avts = agent.get_actionv2(
+                    self.state, return_prob=True
+                )
             except Exception as e:
                 print(f"Error getting action: {e}")
                 break
-
 
             # Check if agent returned invalid move
             if act == -1:
@@ -589,14 +628,14 @@ class Mapping:
             states.append(cur_state)
 
             print(f"act size is {len(acts)}")
-           
+
             # print(f"ppo probs is {probs}")
             pre_reward = self.state.get_reward()
             actions.append(acts)
             latencies.append(pre_reward)
 
             self.state.take_action(action=act)
-           
+
             self.state.mode = "route"
             route_buffer = self.start_route(agent)
             self.state.mode = "placement"
@@ -608,7 +647,7 @@ class Mapping:
             values.append(agent.mcts.root.q)
 
             grpo_probs.append(probs)
-            if route_buffer == None:                    
+            if route_buffer == None:
                 continue
             else:
                 for (
@@ -636,7 +675,9 @@ class Mapping:
         # for rv, vt, vs,a, p in zip(reversed_value, values_target, values, advantages, grpo_probs):
         #     print(f"mc value is {rv} and av value is {vt}, mcts value is {vs}. a is {a}")
         #     print(f"probs is {p[p>0]}")
-        route_advantages, route_values_target = self.compute_gae(route_values, route_rewards)
+        route_advantages, route_values_target = self.compute_gae(
+            route_values, route_rewards
+        )
         placement_data = list(zip(states, grpo_probs, values, advantages, actions))
         routing_data = list(
             zip(
@@ -658,7 +699,13 @@ class Mapping:
 
         rewards, values, actions, latencies, states, probs = [], [], [], [], [], []
 
-        route_states, route_values, route_values, route_rewards, route_actions = [], [], [], [], []
+        route_states, route_values, route_values, route_rewards, route_actions = (
+            [],
+            [],
+            [],
+            [],
+            [],
+        )
 
         step = 0
 
@@ -671,12 +718,12 @@ class Mapping:
                 act, _ = agent.get_new_action(self.state, return_prob=True)
             except Exception as e:
                 print(f"Error getting action: {e}")
-                break 
+                break
 
             if act == -1:
                 if print_action:
                     print("Stopping: Agent returned -1 move")
-                break 
+                break
 
             cur_state = copy.deepcopy(self.state)
             states.append(cur_state)
@@ -697,7 +744,7 @@ class Mapping:
 
             probs.append(probs)
 
-            if  route_buffer == None:
+            if route_buffer == None:
                 continue
             else:
                 for (
@@ -722,7 +769,9 @@ class Mapping:
         # print(f"a1")
         reversed_value = [self.state.get_reward() - latency for latency in latencies]
         advantages, values_target = self.compute_gae(values, rewards)
-        route_advantages, route_values_target = self.compute_grpo_gae(route_values,latencies, route_rewards)
+        route_advantages, route_values_target = self.compute_grpo_gae(
+            route_values, latencies, route_rewards
+        )
         # print(f"rev value is {reversed_value}, gae value is {values_target}")
         # # reversed_route_values = [
         #     self.state.get_reward() - route_value for route_value in route_values
@@ -743,7 +792,6 @@ class Mapping:
         # print(f"data size is {len(states)}, route data size is {len(route_states)}")
         # print(f"a3")
         return self.state.get_reward(), placement_data, routing_data
-
 
     def use_true_reward(self):
         self.env.heristic_reward = False

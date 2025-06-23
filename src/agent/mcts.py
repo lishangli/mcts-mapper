@@ -6,13 +6,16 @@ from typing import List
 
 MAX_DISTANCE = 10000000000
 
+
 def softmax(x):
     e_x = np.exp(x - np.max(x))
     return e_x / e_x.sum()
 
+
 class MCTNode:
     """MCTS Node definition"""
-    def __init__(self, prob, distance,discount=0.99, parent=None):
+
+    def __init__(self, prob, distance, discount=0.99, parent=None):
         # self.state = state
         self.parent = parent
         self.children = {}
@@ -38,7 +41,12 @@ class MCTNode:
     def best_child(self, t, c_param=4):
         """select the best child node based on UCB1"""
         # print("children nums: {}".format(len(self.children)))
-        qa_std = np.std([child.q + self.discount * child.reward for a, child in self.children.items()])
+        qa_std = np.std(
+            [
+                child.q + self.discount * child.reward
+                for a, child in self.children.items()
+            ]
+        )
         # print(f"std is {qa_std}")
         return max(self.children.items(), key=lambda x: x[1].get_value(c_param, qa_std))
 
@@ -49,9 +57,11 @@ class MCTNode:
         # mcts_p = (self.visits+1e-8) / self.parent.visits
         # kl = mcts_p * np.log(mcts_p/self.p)
 
-        self.u = self.p * alpha * c_param + (self.q + self.discount * self.reward) #W- kl
+        self.u = self.p * alpha * c_param + (
+            self.q + self.discount * self.reward
+        )  # W- kl
         return self.u
- 
+
     def expand(self, action_probs, state, mode):
         """expand the node with the given action probabilities"""
         if mode == "placement":
@@ -66,7 +76,7 @@ class MCTNode:
                     distance = state.get_distance(action)
                 else:
                     distance = state.get_route_distance(action)
-                child = MCTNode(prob, distance,self.discount, self)
+                child = MCTNode(prob, distance, self.discount, self)
                 self.children[action] = child
 
     def expandv1(self, action_probs, state, mode, top_n=5):
@@ -75,7 +85,9 @@ class MCTNode:
         else:
             legal_actions = state.get_route_actions()
 
-        sorted_action_probs = sorted(action_probs, key=lambda item: item[1], reverse=True)
+        sorted_action_probs = sorted(
+            action_probs, key=lambda item: item[1], reverse=True
+        )
 
         actions_to_expand = sorted_action_probs[:top_n]
 
@@ -86,7 +98,7 @@ class MCTNode:
                     distance = state.get_distance(action)
                 else:
                     distance = state.get_route_distance(action)
-                child = MCTNode(prob, distance,self.discount, self)
+                child = MCTNode(prob, distance, self.discount, self)
                 self.children[action] = child
 
     def expandv2(self, action_probs, state, mode, top_n=20):
@@ -104,7 +116,9 @@ class MCTNode:
                     distance = state.get_distance(action)
                 else:
                     distance = state.get_route_distance(action)
-                action_distances.append((action, distance , prob)) # 同时保存 action 和 distance
+                action_distances.append(
+                    (action, distance, prob)
+                )  # 同时保存 action 和 distance
 
         sorted_action_distances = sorted(action_distances, key=lambda item: item[1])
 
@@ -114,8 +128,8 @@ class MCTNode:
         # print([prob for _, _, prob in actions_to_expand])
         prob_model = []
         for action, distance, prob in actions_to_expand:
-            prob_model.append(prob/total_prob)
-            child = MCTNode(prob/total_prob, self.value, self.discount, self)
+            prob_model.append(prob / total_prob)
+            child = MCTNode(prob / total_prob, self.value, self.discount, self)
             self.children[action] = child
         # print(f"prob net out is {prob_model}")
 
@@ -134,21 +148,20 @@ class MCTNode:
     def backpropagate(self, result, qf=0):
         """mcts td back up version"""
         self.visits += 1
-        coff = 1.0 * (result-self.q + qf) / self.visits
+        coff = 1.0 * (result - self.q + qf) / self.visits
         self.q += coff
         if self.parent:
-            coff *= (self.visits-1)
-            ret = self.discount * self.q +  self.reward
+            coff *= self.visits - 1
+            ret = self.discount * self.q + self.reward
             self.parent.backpropagate(ret, coff)
 
     def backpropagate_v2(self, result):
         """mcts mc back up version"""
         self.visits += 1
-        self.q += 1.0*(result - self.q) / self.visits 
+        self.q += 1.0 * (result - self.q) / self.visits
         if self.parent:
             ret = self.discount * result + self.reward
             self.parent.backpropagate_v2(ret)
-    
 
     def backpropagate_gae(self, advanatges):
         """update q using advantages"""
@@ -159,13 +172,15 @@ class MCTNode:
             self.parent.backprogagate_gae(new_advantages)
 
         # update value
-        self.q += (advanatges)/self.visits
+        self.q += (advanatges) / self.visits
+
 
 """ MCT definition"""
 
 
 class MCTS:
     """Monte Carlo Tree Search"""
+
     def __init__(self, agent_net, t=0, mode="placement"):
         self.root = MCTNode(1.0, 1)
         self.agent_net = agent_net
@@ -177,7 +192,7 @@ class MCTS:
         self.c_param = 4
 
     def step(self, t):
-        self.t = 1/(1+math.exp(-t+10))
+        self.t = 1 / (1 + math.exp(-t + 10))
 
     @profile
     def search(self, state, alpha=1):
@@ -193,12 +208,11 @@ class MCTS:
         # node.policy = action_probs
         node.value = value
 
-
         if self.mode == "placement":
             if not state.is_terminal():
                 node.expandv2(action_probs, state, self.mode)
             else:
-                
+
                 # print(f"terminsl state in {state.mode} and state cost is {state.sum_reward}")
                 value = 0
         else:
@@ -212,7 +226,7 @@ class MCTS:
     def select(self, state):
         node = self.root
         act = None
-        
+
         while not node.is_leaf() and not state.is_terminal():
             cur_latency = state.get_reward()
             act, node = node.best_child(self.t)
@@ -225,19 +239,18 @@ class MCTS:
                     break
             else:
                 state.take_route_action(act)
-               
 
             node.reward = state.get_reward() - cur_latency
         return act, node
-    
-    def route_process(self,state):
+
+    def route_process(self, state):
         state.mode = "route"
         while not state.is_terminal():
             act = state.get_route_action()
             if act == -1:
-                return True 
+                return True
             elif act < 0:
-                return False 
+                return False
 
             state.take_route_action(act)
         state.mode = "placement"
@@ -274,18 +287,24 @@ class MCTS:
         act_probs = softmax(1.0 / temp * np.log(np.array(visits) + 1e-10))
         print(f"act probs is {act_probs}")
         return acts, act_probs
-    
+
     def get_advantages(self):
 
-        advantages = [node.q + node.reward - self.root.q for act, node in self.root.children.items()]
+        advantages = [
+            node.q + node.reward - self.root.q
+            for act, node in self.root.children.items()
+        ]
         return advantages
 
     def get_advantagesv2(self):
         # values = [node.q + node.reward for act, node in self.root.children.items()]
         # average_value = sum(values) / len(values) if values else 0
-        advantages = [node.q + node.reward - self.root.q for act, node in self.root.children.items()]
+        advantages = [
+            node.q + node.reward - self.root.q
+            for act, node in self.root.children.items()
+        ]
         return advantages
-    
+
     def update_with_move(self, last_move):
         """update mcts root with last move"""
         if last_move in self.root.children:
@@ -297,6 +316,7 @@ class MCTS:
 
 class place_MCTNode(MCTNode):
     """A MCT Node placement"""
+
     def get_value(self, c_param, t):
         alpha = math.sqrt(self.parent.visits) / (1 + self.visits)
         self.u = (self.p * (1 - t) + self.h) * c_param * alpha + (self.q + 500) * (
@@ -317,6 +337,7 @@ class place_MCTNode(MCTNode):
 
 class route_MCTNode(MCTNode):
     """A MCT Node for route"""
+
     def get_value(self, c_param, t):
         alpha = math.sqrt(self.parent.visits) / (1 + self.visits)
         self.u = self.h * alpha
@@ -364,8 +385,7 @@ class MCTSPlayer(object):
 
     def reset_route_player(self):
         self.route_mcts.update_with_move(-1)
-    
-    
+
     @profile
     def get_action(self, state, temp=1e-3, return_prob=0, method="random"):
         """A default get placement actions"""
@@ -389,12 +409,16 @@ class MCTSPlayer(object):
                     + 0.0 * np.random.dirichlet(0.3 * np.ones(len(probs))),
                 )
                 # print("action is {}".format(action))
-            print(f"[get_action] children q values is {[child.q + child.reward for child in self.mcts.root.children.values()]}")
-            r =  self.mcts.root.reward
+            print(
+                f"[get_action] children q values is {[child.q + child.reward for child in self.mcts.root.children.values()]}"
+            )
+            r = self.mcts.root.reward
             self.mcts.update_with_move(action)
-            q = 0.99*self.mcts.root.q +  self.mcts.root.reward
+            q = 0.99 * self.mcts.root.q + self.mcts.root.reward
             print(f"[get_action] self.mcts.root.reward is {r}")
-            print(f"[get_action] v is {v} and qn is {self.mcts.root.q}, q is {q}, root age is {q - v}")
+            print(
+                f"[get_action] v is {v} and qn is {self.mcts.root.q}, q is {q}, root age is {q - v}"
+            )
 
             if return_prob:
                 return action, action_probs, q, v
@@ -403,7 +427,7 @@ class MCTSPlayer(object):
         else:
             # print("WARNING: the state has no legal actions")
             return -1, None, None
-        
+
     def get_actionv2(self, state, temp=1e-3, return_prob=0, method="random"):
         """Another function version  to get placement actions"""
         actions = state.get_actions()
@@ -424,8 +448,10 @@ class MCTSPlayer(object):
                     p=0.95 * probs
                     + 0.05 * np.random.dirichlet(0.3 * np.ones(len(probs))),
                 )
-            print(f"children q values is {[child.q + child.reward for child in self.mcts.root.children.values()]}")
-           
+            print(
+                f"children q values is {[child.q + child.reward for child in self.mcts.root.children.values()]}"
+            )
+
             self.mcts.update_with_move(action)
             # q = 0.99*self.mcts.root.q +  self.mcts.root.reward
             # print(f"self.mcts.root.reward is {self.mcts.root.reward}")
@@ -437,7 +463,7 @@ class MCTSPlayer(object):
                 return action
         else:
             # print("WARNING: the state has no legal actions")
-            return -1, None, None    
+            return -1, None, None
 
     @profile
     def get_route_action(self, state, temp=1e-3, return_prob=0):
@@ -450,7 +476,7 @@ class MCTSPlayer(object):
             if acts == None:
                 return -2, None
             action_probs[list(acts)] = probs
-            action = np.argmax(action_probs) 
+            action = np.argmax(action_probs)
             # action = np.random.choice(
             #     acts,
             #     p=1.0 * probs + 0.0 * np.random.dirichlet(0.3 * np.ones(len(probs))),
@@ -476,7 +502,7 @@ class MCTSPlayer(object):
         )
         if len(actions) > 0:
             probs, value = self.agent_net.policy_value_fn_pure(state)
-            distances = [(action,state.get_distance(action)) for action in actions]
+            distances = [(action, state.get_distance(action)) for action in actions]
             distances = sorted(distances, key=lambda item: item[1])
             top_distances = distances[:10]
             top_a = [item[0] for item in top_distances]
@@ -533,7 +559,7 @@ class MCTSPlayer(object):
                 return -1, None
             # print("WARNING: the state don't need to route actions")
             return -2, None
-        
+
     def get_h_action(self, state, return_prob=True, method="random"):
         """A function to get placement action using distance-prior algorithm"""
         actions = state.get_actions()
@@ -541,14 +567,14 @@ class MCTSPlayer(object):
             state.env.adg.getNodeNums() * len(state.env.adg_features_vec)
         )
         if len(actions) > 0:
-            distances = [(action,state.get_distance(action)) for action in actions]
+            distances = [(action, state.get_distance(action)) for action in actions]
             distances = sorted(distances, key=lambda item: item[1])
             top_distances = distances[:20]
             top_a = [item[0] for item in top_distances]
             top_d = [item[1] for item in top_distances]
             weights = np.exp(-0.4 * np.array(top_d))
             # weights = 1 / (np.array(distances)**4 + 1e-5)
-        
+
             # weights =  np.array(distances)
             # weights = 1 / (np.array(distances)**4 + 1e-5)
             probs = weights / np.sum(weights)
@@ -564,7 +590,7 @@ class MCTSPlayer(object):
                     + 0.0 * np.random.dirichlet(0.3 * np.ones(len(probs))),
                 )
             if return_prob:
-                    return action, actions_probs
+                return action, actions_probs
             else:
                 return action
         else:
@@ -573,7 +599,7 @@ class MCTSPlayer(object):
                 return -1, None
             # print("WARNING: the state don't need to route actions")
             return -2, None
-        
+
     def get_h_action_r(self, state, return_prob=True, method="random"):
         """A function to get route action using distance-prior algorithm"""
         actions = state.get_route_actions()
@@ -582,8 +608,8 @@ class MCTSPlayer(object):
             distances = [state.get_route_distance(action) for action in actions]
             weights = np.exp(-4 * np.array(distances))
             # weights = 1 / (np.array(distances)**4 + 1e-5)
-            
-            probs =  weights / np.sum(weights)
+
+            probs = weights / np.sum(weights)
             action_probs[actions] = probs
             if method == "greedy":
                 action = actions[np.argmax(probs)]
@@ -594,7 +620,7 @@ class MCTSPlayer(object):
                     + 0.0 * np.random.dirichlet(0.3 * np.ones(len(probs))),
                 )
             if return_prob:
-                    return action, action_probs
+                return action, action_probs
             else:
                 return action
         else:
@@ -603,7 +629,6 @@ class MCTSPlayer(object):
                 return -1, None
             # print("WARNING: the state don't need to route actions")
             return -2, None
-
 
     def reset(self):
         self.mcts.update_with_move(-1)

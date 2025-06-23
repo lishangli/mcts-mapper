@@ -513,7 +513,6 @@ class ADG(Graph):
             raise ValueError("Edge {} not found".format(id))
         return self._edges[id]
 
-
     def addNode(self, id, node):
         self._nodes[id] = node
 

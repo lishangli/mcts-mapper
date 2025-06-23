@@ -6,4 +6,11 @@ from .adgParser import ADGIR
 from .dfg import DFGFeatures
 from .dfgParser import DFGParser
 
-__all__ = ["Operation", "Operations", "ADGFeatures", "ADGIR", "DFGFeatures", "DFGParser"]
+__all__ = [
+    "Operation",
+    "Operations",
+    "ADGFeatures",
+    "ADGIR",
+    "DFGFeatures",
+    "DFGParser",
+]
