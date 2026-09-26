@@ -6,7 +6,7 @@
   "cfg_spad_data_width" : 128,
   "num_output" : 32,
   "cfg_addr_width" : 12,
-  "iob_spad_bank_size" : 32768,
+  "iob_spad_bank_size" : 4096,
   "data_width" : 32,
   "iob_mode_names" : {
     "0" : "FIFO_MODE",
@@ -825,30 +825,20 @@
     "attributes" : {
       "num_operands" : 2,
       "num_output" : 1,
-      "ag_nest_levels" : 8,
+      "ag_nest_levels" : 3,
       "data_width" : 32,
       "io_controller_cfg_id" : {
-        "Stride7" : 20,
-        "Cycles6" : 19,
         "Stride1" : 8,
         "Cycles0" : 7,
-        "IsStore" : 24,
-        "Cycles3" : 13,
-        "Stride3" : 12,
-        "Stride6" : 18,
+        "IsStore" : 14,
         "Cycles2" : 11,
         "BaseAddr" : 5,
         "Stride0" : 6,
-        "Cycles5" : 17,
-        "Latency" : 23,
+        "Latency" : 13,
         "Stride2" : 10,
-        "Cycles7" : 21,
-        "Stride5" : 16,
         "Cycles1" : 9,
-        "UseAddr" : 25,
-        "Cycles4" : 15,
-        "II" : 22,
-        "Stride4" : 14
+        "UseAddr" : 15,
+        "II" : 12
       },
       "iob_mode" : 1,
       "sub_modules" : [ {
@@ -862,31 +852,21 @@
         "type" : "RDU"
       } ],
       "configuration" : {
-        "23" : [ "Latency", 223, 218 ],
-        "17" : [ "Cycles5", 166, 155 ],
-        "8" : [ "Stride1", 54, 42 ],
-        "11" : [ "Cycles2", 91, 80 ],
-        "20" : [ "Stride7", 204, 192 ],
-        "2" : [ "RDU", 229, 226 ],
-        "5" : [ "BaseAddr", 16, 0 ],
-        "14" : [ "Stride4", 129, 117 ],
-        "13" : [ "Cycles3", 116, 105 ],
-        "4" : [ "Muxn", 231, 231 ],
-        "22" : [ "II", 217, 217 ],
-        "7" : [ "Cycles0", 41, 30 ],
-        "16" : [ "Stride5", 154, 142 ],
-        "25" : [ "UseAddr", 225, 225 ],
-        "10" : [ "Stride2", 79, 67 ],
-        "19" : [ "Cycles6", 191, 180 ],
-        "18" : [ "Stride6", 179, 167 ],
-        "9" : [ "Cycles1", 66, 55 ],
-        "12" : [ "Stride3", 104, 92 ],
-        "21" : [ "Cycles7", 216, 205 ],
-        "3" : [ "Muxn", 230, 230 ],
-        "15" : [ "Cycles4", 141, 130 ],
-        "6" : [ "Stride0", 29, 17 ],
-        "24" : [ "IsStore", 224, 224 ],
-        "0" : [ "This", 231, 0 ]
+        "8" : [ "Stride1", 51, 39 ],
+        "11" : [ "Cycles2", 88, 77 ],
+        "2" : [ "RDU", 101, 98 ],
+        "5" : [ "BaseAddr", 13, 0 ],
+        "14" : [ "IsStore", 96, 96 ],
+        "4" : [ "Muxn", 103, 103 ],
+        "13" : [ "Latency", 95, 90 ],
+        "7" : [ "Cycles0", 38, 27 ],
+        "10" : [ "Stride2", 76, 64 ],
+        "9" : [ "Cycles1", 63, 52 ],
+        "3" : [ "Muxn", 102, 102 ],
+        "12" : [ "II", 89, 89 ],
+        "6" : [ "Stride0", 26, 14 ],
+        "15" : [ "UseAddr", 97, 97 ],
+        "0" : [ "This", 103, 0 ]
       },
       "instances" : [ {
         "id" : 0,
@@ -930,32 +910,36 @@
     "type" : "GPE",
     "attributes" : {
       "affine_ctrl_reg_cfg_id" : {
-        "Latency" : 9,
-        "InitVal" : 7,
-        "SkipFirst" : 12,
-        "Repeats" : 11,
-        "WI" : 8,
-        "Cycles" : 10
+        "Latency" : 10,
+        "InitVal" : 8,
+        "SkipFirst" : 13,
+        "Repeats" : 12,
+        "WI" : 9,
+        "Cycles" : 11
       },
-      "operations" : [ "PASS", "ADD", "SUB", "MUL", "UDIV", "SHL", "LSHR", "AND", "OR", "CSHL", "XOR", "ACC" ],
+      "operations" : [ "PASS", "ADD", "SUB", "MUL", "UDIV", "SHL", "LSHR", "AND", "OR", "CSHL", "XOR", "ACC", "MIN", "MAX", "EQ", "ULT" ],
       "num_operands" : 2,
       "num_output" : 1,
       "data_width" : 32,
       "configuration" : {
-        "8" : [ "WI", 93, 82 ],
-        "11" : [ "Repeats", 123, 112 ],
-        "2" : [ "ALU", 35, 32 ],
-        "5" : [ "Muxn", 46, 44 ],
-        "4" : [ "RDU", 43, 36 ],
-        "7" : [ "InitVal", 81, 50 ],
-        "10" : [ "Cycles", 111, 100 ],
+        "8" : [ "InitVal", 82, 51 ],
+        "11" : [ "Cycles", 112, 101 ],
+        "2" : [ "ALU", 36, 32 ],
+        "5" : [ "Muxn", 47, 45 ],
+        "4" : [ "RDU", 44, 37 ],
+        "13" : [ "SkipFirst", 125, 125 ],
+        "7" : [ "RF", 135, 126 ],
         "1" : [ "Const", 31, 0 ],
-        "9" : [ "Latency", 99, 94 ],
-        "12" : [ "SkipFirst", 124, 124 ],
-        "6" : [ "Muxn", 49, 47 ],
-        "0" : [ "This", 124, 0 ]
+        "10" : [ "Latency", 100, 95 ],
+        "9" : [ "WI", 94, 83 ],
+        "12" : [ "Repeats", 124, 113 ],
+        "6" : [ "Muxn", 50, 48 ],
+        "0" : [ "This", 135, 0 ]
       },
       "sub_modules" : [ {
+        "id" : 6,
+        "type" : "RF"
+      }, {
         "id" : 3,
         "type" : "REG"
       }, {
@@ -972,6 +956,10 @@
         "type" : "Const"
       } ],
       "instances" : [ {
+        "id" : 7,
+        "type" : "RF",
+        "module_id" : 6
+      }, {
         "id" : 3,
         "type" : "REG",
         "module_id" : 3
@@ -1002,24 +990,27 @@
       } ],
       "num_input" : 8,
       "connections" : {
-        "0" : [ 2, "ALU", 0, 3, "REG", 0 ],
-        "5" : [ 0, "This", 2, 5, "Muxn", 3 ],
-        "10" : [ 1, "Const", 0, 6, "Muxn", 0 ],
-        "14" : [ 0, "This", 7, 6, "Muxn", 4 ],
-        "1" : [ 3, "REG", 0, 0, "This", 0 ],
-        "6" : [ 0, "This", 3, 5, "Muxn", 4 ],
-        "9" : [ 4, "RDU", 0, 2, "ALU", 0 ],
-        "13" : [ 0, "This", 6, 6, "Muxn", 3 ],
-        "2" : [ 1, "Const", 0, 5, "Muxn", 0 ],
-        "17" : [ 4, "RDU", 1, 2, "ALU", 1 ],
-        "12" : [ 0, "This", 5, 6, "Muxn", 2 ],
-        "7" : [ 3, "REG", 1, 5, "Muxn", 5 ],
-        "3" : [ 0, "This", 0, 5, "Muxn", 1 ],
-        "16" : [ 6, "Muxn", 0, 4, "RDU", 1 ],
-        "11" : [ 0, "This", 4, 6, "Muxn", 1 ],
-        "8" : [ 5, "Muxn", 0, 4, "RDU", 0 ],
-        "4" : [ 0, "This", 1, 5, "Muxn", 2 ],
-        "15" : [ 3, "REG", 1, 6, "Muxn", 5 ]
+        "0" : [ 2, "ALU", 0, 7, "RF", 0 ],
+        "5" : [ 0, "This", 1, 5, "Muxn", 2 ],
+        "10" : [ 5, "Muxn", 0, 4, "RDU", 0 ],
+        "14" : [ 0, "This", 5, 6, "Muxn", 2 ],
+        "20" : [ 4, "RDU", 1, 2, "ALU", 1 ],
+        "1" : [ 7, "RF", 0, 3, "REG", 0 ],
+        "6" : [ 0, "This", 2, 5, "Muxn", 3 ],
+        "9" : [ 7, "RF", 1, 5, "Muxn", 6 ],
+        "13" : [ 0, "This", 4, 6, "Muxn", 1 ],
+        "2" : [ 3, "REG", 0, 0, "This", 0 ],
+        "17" : [ 3, "REG", 1, 6, "Muxn", 5 ],
+        "12" : [ 1, "Const", 0, 6, "Muxn", 0 ],
+        "7" : [ 0, "This", 3, 5, "Muxn", 4 ],
+        "3" : [ 1, "Const", 0, 5, "Muxn", 0 ],
+        "18" : [ 7, "RF", 1, 6, "Muxn", 6 ],
+        "16" : [ 0, "This", 7, 6, "Muxn", 4 ],
+        "11" : [ 4, "RDU", 0, 2, "ALU", 0 ],
+        "8" : [ 3, "REG", 1, 5, "Muxn", 5 ],
+        "19" : [ 6, "Muxn", 0, 4, "RDU", 1 ],
+        "4" : [ 0, "This", 0, 5, "Muxn", 1 ],
+        "15" : [ 0, "This", 6, 6, "Muxn", 3 ]
       },
       "max_delay" : 11,
       "cfg_blk_index" : 35
@@ -1062,7 +1053,7 @@
     "0" : [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 ]
   },
   "max_cfg_data_num" : 921,
-  "sum_blk_cfg_bits" : 27130,
+  "sum_blk_cfg_bits" : 24442,
   "instances" : [ {
     "module_id" : 3,
     "type" : "GIB",
@@ -5894,6 +5885,6 @@
     "1870" : [ 59, "GIB", 3, 93, "GIB", 1 ],
     "972" : [ 155, "GIB", 8, 172, "GPE", 0 ]
   },
-  "iob_ag_nest_levels" : 8,
-  "max_blk_cfg_bits" : 232
+  "iob_ag_nest_levels" : 3,
+  "max_blk_cfg_bits" : 136
 }
