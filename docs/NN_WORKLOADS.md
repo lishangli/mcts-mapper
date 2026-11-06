@@ -52,35 +52,31 @@ Two things are needed for a throughput claim:
    mapping ceiling no longer prevents but which this flow still cannot feed from
    memory.
 
-## 3.4 Measured streaming throughput (2026-11-07)
+## 3.4 Measured throughput (2026-11-07, corrected)
 
-Two runs of `nn4x2` with only the AG window length changed (same flow, same
-emitter, corrected fence-before-store ordering):
+Two `nn4x2` runs differing only in the AG window (after fixing the DMA burst
+bug — a single `load_data` covers only 256 B):
 
-| `S2_CAP_CYCLES` | samples | load | exec | store | total |
-|---|---|---|---|---|---|
-| 64 | 64 | 98 | 6 | 733 | 846 |
-| 128 | 128 | 98 | 5 | 765 | 879 |
-
-Slope = 33 cycles for 64 extra samples ≈ **0.52 cycles/sample**, i.e. the array
-absorbs ~1.9 samples per cycle once it is streaming. `nn4x2` computes 16
-operations per sample, so:
+| `S2_CAP_CYCLES` | samples | ops | load | store | total | value |
+|---|---|---|---|---|---|---|
+| 64 | 64 | 1024 | 98 | 731 | 867 | [18, 21] ✓ |
+| 128 | 128 | 2048 | 226 | 1002 | 1302 | [18, 21] ✓ |
 
 ```
-16 ops/sample ÷ 0.52 cycles/sample ≈ 31 ops/cycle
-31 / 64 ops/cycle ceiling ≈ 48 % of peak, sustained
+end-to-end 64-sample  : 1024 / 867  = 1.18 ops/cycle
+end-to-end 128-sample : 2048 / 1302 = 1.57 ops/cycle
+marginal over the extra 64 samples: 6.8 cycles/sample ≈ 2.4 ops/cycle
 ```
 
-This is the first measured throughput figure rather than a lower bound, and it
-changes the picture: **the array is not the problem — the launch path is.** The
-same runs spend 733–765 cycles in the capture DMA, so a 16-operation kernel
-achieves 16/846 ≈ 0.02 ops/cycle end-to-end while its steady-state rate is ~31.
+Two things this establishes with verified-correct runs:
 
-Caveats: the two runs have independent MCTS placements, so the slope carries
-placement noise; and 0.52 cycles/sample is below `exe_ii = 2`, which means the
-AG streams faster than one context per sample and the array pipelines several
-samples per context window. Both need a VCD-level check before being quoted as
-a hard number.
+* the **launch cost amortises**: doubling the batch raises end-to-end
+  throughput by 33 % with no kernel change;
+* the marginal rate is 6.8 cycles/sample for a four-stream layer, dominated by
+  moving four operands per sample — not by the ALU.
+
+Earlier figures (0.52 cycles/sample, 31 ops/cycle) came from runs whose values
+were wrong and are withdrawn.
 
 ## 4. What a LeNet-class workload needs
 
