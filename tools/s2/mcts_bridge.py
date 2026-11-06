@@ -391,7 +391,11 @@ EMIT_OK = False
 for attempt in range(12):
     mapping = Mapping(dfg, adg, ops, False)
     mapping.use_true_reward()
-    lat = mapping.test_mapping(agent, is_shown=False, temp=1e-2)
+    # Retry diversity: a near-greedy policy (temp 1e-2) reproduces almost the
+    # same placement every attempt, so the 12-attempt budget used to re-fail on
+    # the same edge. Escalate the sampling temperature instead.
+    TEMP = (1e-2, 1e-2, 5e-2, 5e-2, 0.15, 0.15, 0.35, 0.35, 0.6, 0.6, 1.0, 1.0)
+    lat = mapping.test_mapping(agent, is_shown=False, temp=TEMP[min(attempt, len(TEMP) - 1)])
     if lat is None:
         if STATS_ON:
             FAIL_REASONS['mapping failed'] = FAIL_REASONS.get('mapping failed', 0) + 1
@@ -743,9 +747,10 @@ for attempt in range(12):
                      for si, n, val in din_meta)
         st = ''.join('\tstore(dout_addr[%d], 0x%x, 512, 0, 0);\n' % (i, s * 4096)
                      for i, (s, _) in enumerate(caps))
-        # s2_rdcycle brackets execute()/store() so the run log carries the
-        # hardware cost of one kernel, the ground truth for the timing model
-        # (docs/EXECUTION_MODEL.md).
+        # s2_rdcycle brackets each phase so the run log carries the hardware cost
+        # of one kernel (docs/EXECUTION_MODEL.md): load = config+input DMA,
+        # exec = the execute() instruction, store = capture DMA issue, total =
+        # through the fence. caps = capture channels, i.e. 512 B of store each.
         exe = ('#include "cgra_execute.h"\n'
                '#include <stdio.h>\n'
                'static inline unsigned long s2_rdcycle(void) { unsigned long c;\n'
@@ -753,20 +758,23 @@ for attempt in range(12):
                'void cgra_execute0(void** din_addr, void** dout_addr)\n{\n'
                '\tstatic unsigned short cin[%d][3] __attribute__((aligned(64))) = {\n'
                '%s\n\t};\n\n'
+               '\tunsigned long t_load0 = s2_rdcycle();\n'
                '\tload_cfg((void*)cin, 0x20000, %d, 0, 0);\n' % (len(allrows), '\n'.join(lines), len(allrows) * 6)
                + ld +
+               '\tunsigned long t_load1 = s2_rdcycle();\n'
                '\tconfig(0x0, %d, 0, 0);\n'
-               '\tconfig(0x%x, %d, 0, 0);\n'
-               '\tunsigned long t0 = s2_rdcycle();\n'
-               '\texecute(0x%x, 0, 0);\n'
-               '\tunsigned long t1 = s2_rdcycle();\n' % (len(rowsA), base_b, len(rowsB), iob_ens)
+               '\tconfig(0x%x, %d, 0, 0);\n' % (len(rowsA), base_b, len(rowsB))
+               + '\tunsigned long t_exec0 = s2_rdcycle();\n'
+               '\texecute(0x%x, 0, 0);\n' % iob_ens
+               + '\tunsigned long t_exec1 = s2_rdcycle();\n'
                + st +
-               '\tunsigned long t2 = s2_rdcycle();\n'
+               '\tunsigned long t_store1 = s2_rdcycle();\n'
                '\tfence(1);\n'
-               '\tunsigned long t3 = s2_rdcycle();\n'
-               '\tprintf("S2_PERF exec=%lu store=%lu total=%lu\\n",\n'
-               '\t       t1 - t0, t2 - t1, t3 - t0);\n'
-               '}\n')
+               '\tunsigned long t_all = s2_rdcycle();\n'
+               '\tprintf("S2_PERF load=%%lu exec=%%lu store=%%lu total=%%lu caps=%d\\n",\n'
+               '\t       t_load1 - t_load0, t_exec1 - t_exec0, t_store1 - t_exec1,\n'
+               '\t       t_all - t_load0);\n' % len(caps)
+               + '}\n')
         open(OUT_DIR + '/cgra_execute.c', 'w').write(exe)
         # generate matching main (one const array per stream). 64B alignment keeps
         # the CPU fill loop from emitting misaligned vector stores, which make the

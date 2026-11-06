@@ -20,7 +20,8 @@ OUT = os.environ.get('S2_OUT_DIR') or S2      # where run_dfg.sh writes artefact
 sys.path.insert(0, S2)
 from regression import CASES, steady            # noqa: E402  (same case list)
 
-PERF_RE = re.compile(r'S2_PERF exec=(\d+) store=(\d+) total=(\d+)')
+PERF_RE = re.compile(
+    r'S2_PERF load=(\d+) exec=(\d+) store=(\d+) total=(\d+) caps=(\d+)')
 
 
 def opt(args, name, default=None):
@@ -33,18 +34,22 @@ def opt(args, name, default=None):
 
 
 def measure(tag):
-    """(exec, store, total) cycles from a finished run log, or Nones.
+    """Cycle counters from a finished run log, or None.
 
-    total spans execute()+store()+fence(1), i.e. the kernel's wall-clock cost on
-    the RISC-V side; exec alone only covers the execute() instruction, which
-    returns before the capture window drains."""
+    load  = load_cfg + input DMA
+    exec  = the execute() instruction (returns before the array drains)
+    store = capture DMA issue, 512 B per channel
+    total = load + exec + store + fence, i.e. the kernel's wall-clock cost
+    caps  = number of capture channels, the store's byte count is 512 * caps
+    """
     path = os.path.join(OUT, tag + '_run.log')
     if not os.path.exists(path):
-        return None, None, None
+        return None
     m = PERF_RE.search(open(path, errors='replace').read())
     if not m:
-        return None, None, None
-    return int(m.group(1)), int(m.group(2)), int(m.group(3))
+        return None
+    keys = ('load', 'exec', 'store', 'total', 'caps')
+    return {k: int(v) for k, v in zip(keys, m.groups())}
 
 
 def case_from_path(path):
@@ -76,17 +81,17 @@ def main():
             tag = 'pf_%s_%d' % (os.path.splitext(dfg)[0], k)
             p = subprocess.run([os.path.join(S2, 'run_dfg.sh'), dfg, tag],
                                capture_output=True, text=True, cwd=S2)
-            exec_c, store_c, total_c = measure(tag)
+            perf = measure(tag) or {}
             st = steady(os.path.join(OUT, tag + '_run.log'))
             got = [st.get(i, (None, 0))[0] for i in range(len(expect))]
             good = p.returncode == 0 and got == expect
             ok += good
-            rows.append({'case': dfg, 'exec': exec_c, 'store': store_c,
-                         'total': total_c, 'got': got, 'expect': expect,
-                         'pass': good})
-            print('%-28s exec=%-4s store=%-4s total=%-5s got=%-14s expect=%-14s %s'
-                  % (dfg, exec_c, store_c, total_c, got, expect,
-                     'PASS' if good else 'FAIL'))
+            rows.append(dict(perf, case=dfg, got=got, expect=expect, pass_=good))
+            print('%-28s load=%-4s exec=%-4s store=%-4s total=%-5s caps=%-2s '
+                  'got=%-14s expect=%-14s %s'
+                  % (dfg, perf.get('load'), perf.get('exec'),
+                     perf.get('store'), perf.get('total'), perf.get('caps'),
+                     got, expect, 'PASS' if good else 'FAIL'))
     print('\n%d/%d PASS  (%.0fs)' % (ok, len(rows), time.time() - t0))
     json.dump({'rows': rows, 'elapsed_s': round(time.time() - t0, 1)},
               open(out, 'w'), indent=1)
