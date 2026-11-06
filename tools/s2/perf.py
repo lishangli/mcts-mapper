@@ -21,7 +21,8 @@ sys.path.insert(0, S2)
 from regression import CASES, steady, bridge_hint   # noqa: E402  (same list)
 
 PERF_RE = re.compile(
-    r'S2_PERF load=(\d+) exec=(\d+) store=(\d+) total=(\d+) caps=(\d+)')
+    r'S2_PERF load=(\d+) exec=(\d+) store=(\d+) total=(\d+) caps=(\d+)'
+    r'(?: it=(\d+))?')
 
 
 def opt(args, name, default=None):
@@ -48,8 +49,9 @@ def measure(tag):
     m = PERF_RE.search(open(path, errors='replace').read())
     if not m:
         return None
-    keys = ('load', 'exec', 'store', 'total', 'caps')
-    return {k: int(v) for k, v in zip(keys, m.groups())}
+    keys = ('load', 'exec', 'store', 'total', 'caps', 'it')
+    return {k: int(v) if v is not None else 1
+            for k, v in zip(keys, m.groups())}
 
 
 def case_from_path(path):

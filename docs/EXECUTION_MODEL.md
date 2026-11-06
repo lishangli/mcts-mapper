@@ -222,6 +222,27 @@ per-channel beat count, which the current run log does not carry yet.
   than ~60 context steps cannot finish inside one window and needs either tiling
   or a longer `Cycles0`.
 
+
+### 3.3 Correction: the fence must precede the store (2026-11-07)
+
+The generated code used to issue the capture store *before* `fence(1)`, so the
+timer stopped before the array had drained and every total in §3.1/§3.2 was a
+lower bound. Moving the fence ahead of the store (needed to run several rounds
+per configuration) changes `dfg_scale` from **67 to 315 cycles** with the same
+value (11). The extra ~250 cycles are the capture window and the AG drain that
+the old ordering skipped.
+
+Consequences:
+
+* the honest shape is `total ≈ load + exec + window_drain + store`, with
+  `window_drain ≈ 250` for a 64-context window at `exe_ii = 2` plus AG start;
+* every utilisation figure published earlier (0.55 % for nn3x2, 0.17 % for
+  nn4x2) is therefore an **upper bound**; the corrected denominator is larger;
+* `S2_REPEAT=K>1` (several rounds on one configuration) **hangs** the run: the
+  controller does not accept a second `execute()` without reconfiguration, so
+  amortisation must come from II scheduling or a longer per-launch window, not
+  from re-issuing the command.
+
 ## 4.1 Neural-network kernels measured so far
 
 `gen_nn.py` emits `y_o = sum_i w[o][i] * x_i + b[o]` as MUL/ADD nodes with the

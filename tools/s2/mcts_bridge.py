@@ -482,6 +482,10 @@ def iob_cfg(fields):
 # model can be fitted from controlled runs (docs/EXECUTION_MODEL.md §3).
 CAP_CYCLES = int(os.environ.get('S2_CAP_CYCLES', '64'))
 STORE_BYTES = int(os.environ.get('S2_STORE_BYTES', '512'))
+# Number of execute() rounds on the SAME configuration. K > 1 amortises the
+# launch cost (config + input DMA) and is the only way this flow can measure a
+# per-iteration throughput before real II scheduling exists.
+REPEAT = max(1, int(os.environ.get('S2_REPEAT', '1')))
 
 def iob_rows(n, is_store, mux):
     iw = iob_cfg({'BaseAddr': (n % 16) * 1024, 'Stride0': 1,
@@ -975,15 +979,17 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                '\tconfig(0x0, %d, 0, 0);\n'
                '\tconfig(0x%x, %d, 0, 0);\n' % (len(rowsA), base_b, len(rowsB))
                + '\tunsigned long t_exec0 = s2_rdcycle();\n'
-               '\texecute(0x%x, 0, 0);\n' % iob_ens
+               '\tfor (int r_ = 0; r_ < %d; r_++) { execute(0x%x, 0, 0);'
+               ' fence(1); }\n' % (REPEAT, iob_ens)
                + '\tunsigned long t_exec1 = s2_rdcycle();\n'
                + st +
                '\tunsigned long t_store1 = s2_rdcycle();\n'
                '\tfence(1);\n'
                '\tunsigned long t_all = s2_rdcycle();\n'
-               '\tprintf("S2_PERF load=%%lu exec=%%lu store=%%lu total=%%lu caps=%d\\n",\n'
+               '\tprintf("S2_PERF load=%%lu exec=%%lu store=%%lu total=%%lu caps=%d'
+               ' it=%d\\n",\n'
                '\t       t_load1 - t_load0, t_exec1 - t_exec0, t_store1 - t_exec1,\n'
-               '\t       t_all - t_load0);\n' % len(caps)
+               '\t       t_all - t_load0);\n' % (len(caps), REPEAT)
                + '}\n')
         open(OUT_DIR + '/cgra_execute.c', 'w').write(exe)
         # generate matching main (one const array per stream). 64B alignment keeps
