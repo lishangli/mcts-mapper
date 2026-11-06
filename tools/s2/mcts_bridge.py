@@ -17,7 +17,7 @@ Env switches:
                    i.e. hold the slot first, then flip it; 1 = level 0 only,
                    which reproduces the pre-bump hard-fail behaviour).
 """
-import sys, os, json, random
+import sys, os, json, random, copy
 D = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(D, '..', '..'))
 SRC = os.environ.get('S2_MAPPER_SRC') or os.path.join(REPO, 'src')
@@ -80,6 +80,10 @@ STRICT_OCC = os.environ.get('S2_OCC_STRICT', '0') == '1'
 # S2_RIPUP=0 disables the intra-node rip-up retry (second operand order), which
 # is the A/B control for "does routing order matter for this DFG".
 RIPUP = os.environ.get('S2_RIPUP', '1') == '1'
+# S2_RIPUP_CROSS=1 lets a failing edge release previously routed edges and
+# re-route them (PathFinder-lite). Victims must keep their exact delay, so no
+# already-assigned context can be invalidated.
+CROSS_RIPUP = os.environ.get('S2_RIPUP_CROSS', '1') == '1'
 # S2_SLOT_OCC=1 makes routing occupancy time-expanded (docs/MRRG_PLAN.md):
 # a GIB mux is claimed per config bank, so two paths can share a wire when
 # their values arrive in different contexts. Default off until RTL-validated.
@@ -628,6 +632,7 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
             order.append(nid)
         for nid in node_by_id: visit(nid)
         route_of = {}
+        ROUTED = []      # committed edges, newest last: the rip-up pool
         # mux configs shareable by input index, wires read as a source exclusive
         occ = Occ(strict=STRICT_OCC)
         port_used = {}   # pe inst -> input pins already carrying a signal
@@ -737,6 +742,49 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                     OPND_ASSIGN[e.id] = opnd_of[e.id]
                 print('swap operands %s (%s)' % (nid, op_of[nid]))
                 fail = route_operands(seq)
+            def try_cross_ripup(e):
+                """release recent edges that block `e`, re-route them unchanged.
+
+                Only edges whose delay can be reproduced exactly are accepted, so
+                every context assigned so far remains valid (no silent timing
+                change). Rolls back completely when an attempt fails.
+                """
+                for k in (1, 2, 3, 4, 6, 8):
+                    if len(ROUTED) < k:
+                        break
+                    victims = ROUTED[-k:]
+                    snap = (copy.deepcopy(occ.cfg), copy.deepcopy(occ.rd))
+                    marks = [v['claimed'] for v in victims]
+                    for v in victims:
+                        occ.release(v['claimed'])
+                        v['claimed'] = []
+                    rewind()
+                    ok = route_operands(seq, c0_use) is None
+                    if ok:
+                        good = True
+                        for v in victims:
+                            p = route_parity(v['src'], v['dst'], v['port'],
+                                             v['hs'] % 4, occ=occ, c0=v['c0'])
+                            if p is None or path_delay(p) != v['hs']:
+                                good = False
+                                break
+                            occ.release(v['claimed'])
+                            v['claimed'] = occ.claim(
+                                p, path_slots(p, v['c0']) if SLOT_OCC else None)
+                            route_of[v['eid']] = p
+                        if good:
+                            print('ripup %d edge(s) for %d->%d' % (k, e.tail, e.head))
+                            return None
+                    occ.cfg, occ.rd = snap
+                    for v, m in zip(victims, marks):
+                        if v['claimed'] != m:
+                            occ.release(v['claimed'])
+                        v['claimed'] = m
+                    rewind()
+                return e
+
+            if fail is not None and CROSS_RIPUP:
+                fail = try_cross_ripup(fail)
             if fail is not None:
                 assert False, 'no route %d->%d op%d %s' % (
                     fail.tail, fail.head, fail.operand, LAST_ROUTE_FAIL or '{}')
@@ -826,6 +874,13 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
             # only ctx mod 4 is meaningful; keep it normalised so long routes stop
             # ratcheting the absolute counter (and the parity loop with it)
             ctx_of[nid] = c0 % 4
+            for e in ins:
+                if e.id in hs:
+                    ROUTED.append({'eid': e.id,
+                                   'src': PEBLK_INV[placement[e.tail]],
+                                   'dst': di, 'port': port_of[e.id],
+                                   'c0': c0, 'hs': hs[e.id],
+                                   'claimed': claimed[e.id]})
             print('sched %s(ctx=%d slot=%d%s):' % (node_by_id[nid].getOpName(), ctx_of[nid],
                                                    ctx_of[nid] % 2,
                                                    ' bumped+%d' % bump if bump else ''),
