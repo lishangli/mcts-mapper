@@ -16,6 +16,7 @@ import sys
 import time
 
 S2 = os.path.dirname(os.path.abspath(__file__))
+OUT = os.environ.get('S2_OUT_DIR') or S2      # where run_dfg.sh writes artefacts
 sys.path.insert(0, S2)
 from regression import CASES, steady            # noqa: E402  (same case list)
 
@@ -37,7 +38,7 @@ def measure(tag):
     total spans execute()+store()+fence(1), i.e. the kernel's wall-clock cost on
     the RISC-V side; exec alone only covers the execute() instruction, which
     returns before the capture window drains."""
-    path = os.path.join(S2, tag + '_run.log')
+    path = os.path.join(OUT, tag + '_run.log')
     if not os.path.exists(path):
         return None, None, None
     m = PERF_RE.search(open(path, errors='replace').read())
@@ -46,12 +47,26 @@ def measure(tag):
     return int(m.group(1)), int(m.group(2)), int(m.group(3))
 
 
+def case_from_path(path):
+    """(--dfg) expected values come from the companion *_expect.json, if any."""
+    path = os.path.abspath(path)
+    exp_path = path[:-5] + '_expect.json' if path.endswith('.json') else None
+    expect = []
+    if exp_path and os.path.exists(exp_path):
+        expect = json.load(open(exp_path))['expect']
+    return os.path.basename(path), expect
+
+
 def main():
     args = sys.argv[1:]
     only = opt(args, '--only')
+    dfg_arg = opt(args, '--dfg')
     rep = int(opt(args, '--repeat', 1))
-    out = opt(args, '--json', os.path.join(S2, 'perf_latest.json'))
-    cases = [c for c in CASES if only is None or only in c[0]]
+    out = opt(args, '--json', os.path.join(OUT, 'perf_latest.json'))
+    if dfg_arg:
+        cases = [case_from_path(dfg_arg)]
+    else:
+        cases = [c for c in CASES if only is None or only in c[0]]
     if not cases:
         print('no case matches --only %r' % only)
         return 2
@@ -62,7 +77,7 @@ def main():
             p = subprocess.run([os.path.join(S2, 'run_dfg.sh'), dfg, tag],
                                capture_output=True, text=True, cwd=S2)
             exec_c, store_c, total_c = measure(tag)
-            st = steady(os.path.join(S2, tag + '_run.log'))
+            st = steady(os.path.join(OUT, tag + '_run.log'))
             got = [st.get(i, (None, 0))[0] for i in range(len(expect))]
             good = p.returncode == 0 and got == expect
             ok += good
