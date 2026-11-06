@@ -97,6 +97,22 @@ The next step is to give the router real delay freedom: visit states as
 be explored for *distinct* wires), or to insert explicit 1-cycle delay hops on
 demand.
 
+
+### 2026-11-07 (later): the constraint was doing more harm than good
+
+`S2_NO_PHASE=1` drops the mod-4 check. Evidence collected:
+
+| run | result |
+|---|---|
+| `dfg_chain5` | PASS, value 9 |
+| `dfg_big` (10 PEs) | PASS, value 31 |
+| `l4w5o3c3`, 1 attempt | 24 of 20 nodes scheduled before the next edge dead-ends (was 19) |
+| `c16w1o3c3` (16-node chain) | **all 16 nodes scheduled**, then `no const IOB` |
+
+So with the constraint removed the scheduler gets through the whole 16-node chain
+and the next blocker is IOB bank allocation for constant streams, not routing.
+Both must be fixed before a >12-node NN layer can be measured.
+
 ## Out of scope
 
 True modulo scheduling (II > 1 over loop iterations) stays out of scope for this

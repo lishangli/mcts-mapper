@@ -1,0 +1,25 @@
+{
+ "name": "dag_l16w1o3c3_s0",
+ "params": {
+  "layers": 16,
+  "width": 1,
+  "outputs": 3,
+  "consts": 3,
+  "seed": 0,
+  "ops": "ADD,SUB,PASS",
+  "maxfanout": 2,
+  "shape": "chain"
+ },
+ "objects": 24,
+ "edges": 35,
+ "compute_nodes": 16,
+ "inputs": 2,
+ "consts": 3,
+ "outputs": 3,
+ "expect": [
+  4,
+  8,
+  6
+ ],
+ "dfg": "dfg_dag_c16w1o3c3.json"
+}
