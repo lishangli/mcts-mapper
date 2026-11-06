@@ -137,21 +137,34 @@ Three facts follow:
 * wall clock is bimodal: ~11–13 cycles when the store finds nothing to move, and
   ~190 cycles when the capture path actually drains 512 B per channel. The
   difference is the DMA, not the array.
-* therefore the model has to separate three terms:
+* therefore the model has to separate the phases.
+
+### 3.1 Phase-split measurements (2026-11-07)
+
+`S2_PERF load=… exec=… store=… total=… caps=…` splits the kernel into
+config+input DMA (`load`), the `execute()` instruction (`exec`), the capture DMA
+issue (`store`) and the whole thing through `fence(1)` (`total`).
+
+| case | caps | load | exec | store | total | total − 64 |
+|---|---|---|---|---|---|---|
+| dfg_scale | 1 | 25 | 4 | 6 | 67 | 3 |
+| dfg_branch | 1 | 60 | 25 | 11 | 107 | 43 |
+
+Both totals sit just above the 64-cycle AG window (`Cycles0 = 64`), which means
+the capture window runs concurrently with the DMA and the tail is what is left
+after it. The residual does **not** track `exec` (25 vs 4) but does track
+`load` (60 vs 25 → tail 43 vs 3), i.e. the cost is dominated by how much has to
+be shuttled in and out, not by the datapath.
 
 ```
-total = issue(exec) + array_drain + capture_dma(store)
-
-issue   ≈ 4 .. 26 cycles, independent of graph size (command path)
-capture ≈ 64 contexts × exe_ii(2) ≈ 128 cycles  (AG window, only visible when
-          the window is actually walked)
-dma     ≈ 512 B per capture channel
+total ≈ max(64, load + exec + store) + tail,  tail ≈ load − 22   (2 points, fit TBD)
 ```
 
-The 32-cycle cases (`dfg_chain5`, `dfg_const`) sit between the two modes; a
-predictive fit will need the AG start offset and the number of beats per store,
-which the current instrumentation does not record. That is the next measurement
-gap, not a modelling choice.
+The fence column (total − load − exec − store) is 32 and 11 cycles respectively;
+it absorbs the AG completion, which is why the split has to come from the
+generated code rather than from the RISC-V side alone. Two points are enough to
+fix the shape, not the constants: the constants need the AG start offset and the
+per-channel beat count, which the current run log does not carry yet.
 
 ## 4. What this implies for neural-network workloads
 
@@ -165,6 +178,23 @@ gap, not a modelling choice.
 * Because capture is a fixed 64-cycle window, a layer whose tiled DFG has more
   than ~60 context steps cannot finish inside one window and needs either tiling
   or a longer `Cycles0`.
+
+## 4.1 Neural-network kernels measured so far
+
+`gen_nn.py` emits `y_o = sum_i w[o][i] * x_i + b[o]` as MUL/ADD nodes with the
+parameters inlined, and evaluates the same graph independently. `nn3x2`
+(3 activations, 2 neurons, 6 MUL + 6 ADD) runs on the RTL and captures
+`[10, 14]`, exactly the reference values, in `exec=5 store=10 total=34`.
+
+Interpretation, stated as a number rather than a slogan:
+
+* 12 compute operations in 34 cycles ≈ **0.35 ops/cycle**, against the 64 ops/cycle
+  array ceiling derived in §1.3 — 0.55 % utilization.
+* That is not a datapath limit: a layer this small finishes inside one 64-cycle
+  AG window, so the kernel is latency-bound (window + DMA), not throughput-bound.
+* Consequence: a *high-performance* claim needs layers wide enough to fill the
+  window, which in turn needs DFGs larger than the current 12-node mapping
+  ceiling. The ceiling, not the arithmetic, is the blocker.
 
 ## 5. Validation status
 
