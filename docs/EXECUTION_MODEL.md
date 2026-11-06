@@ -297,6 +297,26 @@ That is the honest position: streaming throughput is demonstrated for one
 kernel, and the multi-stream case needs either a per-stream bank window > 64 or
 a second capture configuration before the same measurement can be repeated.
 
+
+#### Why the multi-stream window still corrupts (characterised, not fixed)
+
+`nn4x2` at `S2_CAP_CYCLES=128` settles at a **constant 16** where 18 is
+expected (`O0` is 16 for all 122 trailing samples, not a wrap pattern), and the
+same kernel at 64 samples is exactly 18. A constant wrong value means an
+operand is missing, not that samples are misaligned: one of the four input
+streams is not being read past word 64.
+
+Consistent with that, `load_data` now requests 512 B per stream and the array
+start address is the same, so the remaining suspect is the IOB address
+generator's window per stream (its BaseAddr uses one 1 KB group offset while the
+DMA writes at a 4 KB bank offset; for 64 words the two coincide, for 128 they
+may not). That is the next thing to check, and it needs an RTL-level look at
+`IOB.scala`'s address generator rather than another timing run.
+
+Until then, the only verified streaming throughput is the single-stream one
+(`dfg_scale`: 0.83 cycles/sample), and `nn4x2` keeps its end-to-end
+867 cycles / 16 ops = 0.018 ops/cycle.
+
 ## 4. What this implies for neural-network workloads
 
 * The array executes **64 integer ops/cycle at peak**; a LeNet-class convolution
