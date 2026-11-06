@@ -322,6 +322,8 @@ def group_ports(inst, operand):
                   sched.PES[str(inst)]['mux']['rdu_io_in_%d' % operand]['srcs']
                   if x.startswith('io_in_'))
 
+LAST_ROUTE_FAIL = {}   # set when route_operand runs out of candidates
+
 def route_operand(src_inst, dst_inst, operand, prefer=None, occ=(), used_ports=()):
     """route to a port in the operand's mux group (per-PE heterogeneous).
     used_ports: pins already carrying a signal for this PE - a physical pin can
@@ -344,6 +346,26 @@ def route_operand(src_inst, dst_inst, operand, prefer=None, occ=(), used_ports=(
                 terms = set(tuple(x) for x in IW['pe_out'][str(src_inst)])
             pth = route_to_terms(tuple(tgt), terms, occ)
         if pth: return cand, pth
+    # Diagnostics: distinguish "this PE has no spare pin" from "the netlist path
+    # exists but occupancy blocks it" from "no path at all". Only the middle case
+    # is congestion, and only that one benefits from placement changes.
+    free_pins = [p for p in group_ports(dst_inst, operand) if p not in used_ports]
+    free_path = None
+    if free_pins:
+        tgt = IW['pe_in'][str(dst_inst)].get(str(free_pins[0]))
+        if tgt is not None:
+            free_path = route_to_terms(tuple(tgt),
+                                       set(tuple(x) for x in IW['pe_out'][str(src_inst)]),
+                                       ())
+    LAST_ROUTE_FAIL.clear()
+    LAST_ROUTE_FAIL.update({
+        'src': src_inst, 'dst': dst_inst, 'operand': operand,
+        'group': group_ports(dst_inst, operand), 'used': sorted(used_ports),
+        'free_pins': free_pins,
+        'kind': ('no free pin' if not free_pins
+                 else 'congestion' if free_path else 'structurally unroutable'),
+        'free_hops': len(free_path) if free_path else None,
+    })
     return None, None
 
 OPC = {'PASS': 0, 'ADD': 1, 'SUB': 2, 'MUL': 3}
@@ -473,7 +495,8 @@ for attempt in range(12):
                 in_p, path = route_operand(PEBLK_INV[placement[e.tail]], di, opnd,
                                            prefer=port_of.get(e.id), occ=occ,
                                            used_ports=port_used.get(di, ()))
-                assert path, 'no route %d->%d op%d' % (e.tail, e.head, opnd)
+                assert path, 'no route %d->%d op%d %s' % (
+                    e.tail, e.head, opnd, LAST_ROUTE_FAIL or '{}')
                 port_used.setdefault(di, set()).add(in_p)
                 hs[e.id] = path_delay(path); route_of[e.id] = path
                 port_of[e.id] = in_p
@@ -736,8 +759,11 @@ for attempt in range(12):
                '\tunsigned long t1 = s2_rdcycle();\n' % (len(rowsA), base_b, len(rowsB), iob_ens)
                + st +
                '\tunsigned long t2 = s2_rdcycle();\n'
-               '\tprintf("S2_PERF exec=%lu store=%lu\\n", t1 - t0, t2 - t1);\n'
-               'fence(1);}\n')
+               '\tfence(1);\n'
+               '\tunsigned long t3 = s2_rdcycle();\n'
+               '\tprintf("S2_PERF exec=%lu store=%lu total=%lu\\n",\n'
+               '\t       t1 - t0, t2 - t1, t3 - t0);\n'
+               '}\n')
         open(OUT_DIR + '/cgra_execute.c', 'w').write(exe)
         # generate matching main (one const array per stream). 64B alignment keeps
         # the CPU fill loop from emitting misaligned vector stores, which make the

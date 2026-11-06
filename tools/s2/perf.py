@@ -1,0 +1,82 @@
+"""Measure one DFG kernel end to end and compare with its expected values.
+
+Runs tools/s2/run_dfg.sh for each case, then reports the hardware cost the RTL
+printed (`S2_PERF exec=<cycles> store=<cycles>`, emitted by the generated
+cgra_execute.c) next to the steady-state capture value and the DFG's expected
+value. This is the measurement side of the execution model documented in
+docs/EXECUTION_MODEL.md.
+
+usage: python perf.py [--only SUBSTR] [--repeat N] [--json OUT]
+"""
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+
+S2 = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, S2)
+from regression import CASES, steady            # noqa: E402  (same case list)
+
+PERF_RE = re.compile(r'S2_PERF exec=(\d+) store=(\d+) total=(\d+)')
+
+
+def opt(args, name, default=None):
+    if name not in args:
+        return default
+    i = args.index(name)
+    if i + 1 >= len(args):
+        raise SystemExit('%s needs a value' % name)
+    return args[i + 1]
+
+
+def measure(tag):
+    """(exec, store, total) cycles from a finished run log, or Nones.
+
+    total spans execute()+store()+fence(1), i.e. the kernel's wall-clock cost on
+    the RISC-V side; exec alone only covers the execute() instruction, which
+    returns before the capture window drains."""
+    path = os.path.join(S2, tag + '_run.log')
+    if not os.path.exists(path):
+        return None, None, None
+    m = PERF_RE.search(open(path, errors='replace').read())
+    if not m:
+        return None, None, None
+    return int(m.group(1)), int(m.group(2)), int(m.group(3))
+
+
+def main():
+    args = sys.argv[1:]
+    only = opt(args, '--only')
+    rep = int(opt(args, '--repeat', 1))
+    out = opt(args, '--json', os.path.join(S2, 'perf_latest.json'))
+    cases = [c for c in CASES if only is None or only in c[0]]
+    if not cases:
+        print('no case matches --only %r' % only)
+        return 2
+    rows, ok, t0 = [], 0, time.time()
+    for dfg, expect in cases:
+        for k in range(rep):
+            tag = 'pf_%s_%d' % (os.path.splitext(dfg)[0], k)
+            p = subprocess.run([os.path.join(S2, 'run_dfg.sh'), dfg, tag],
+                               capture_output=True, text=True, cwd=S2)
+            exec_c, store_c, total_c = measure(tag)
+            st = steady(os.path.join(S2, tag + '_run.log'))
+            got = [st.get(i, (None, 0))[0] for i in range(len(expect))]
+            good = p.returncode == 0 and got == expect
+            ok += good
+            rows.append({'case': dfg, 'exec': exec_c, 'store': store_c,
+                         'total': total_c, 'got': got, 'expect': expect,
+                         'pass': good})
+            print('%-28s exec=%-4s store=%-4s total=%-5s got=%-14s expect=%-14s %s'
+                  % (dfg, exec_c, store_c, total_c, got, expect,
+                     'PASS' if good else 'FAIL'))
+    print('\n%d/%d PASS  (%.0fs)' % (ok, len(rows), time.time() - t0))
+    json.dump({'rows': rows, 'elapsed_s': round(time.time() - t0, 1)},
+              open(out, 'w'), indent=1)
+    return 0 if ok == len(rows) else 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())
