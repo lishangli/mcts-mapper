@@ -121,6 +121,18 @@ So with the constraint removed the scheduler gets through the whole 16-node chai
 and the next blocker is IOB bank allocation for constant streams, not routing.
 Both must be fixed before a >12-node NN layer can be measured.
 
+
+### Capacity boundary (2026-11-07)
+
+| compute nodes | case | result |
+|---|---|---|
+| 16 | `nn4x2` | maps, `[18, 21]` bit-exact |
+| 20 | `dfg_dag_l4w5o3c3` | maps, `[6, 6, 4]` bit-exact |
+| 24 | `nn4x3` | **fails after 12 remaps**: `no route 37->41 op1`, 4 pins free, `free_hops=9` (congestion) |
+
+So the boundary moved from 12 to 20 and now sits between 20 and 24; the next
+blocker is still congestion, not the phase model.
+
 ## Out of scope
 
 True modulo scheduling (II > 1 over loop iterations) stays out of scope for this

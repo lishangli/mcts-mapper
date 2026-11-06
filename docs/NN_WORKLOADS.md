@@ -52,7 +52,37 @@ Two things are needed for a throughput claim:
    mapping ceiling no longer prevents but which this flow still cannot feed from
    memory.
 
-## 3. What a LeNet-class workload needs
+## 3.4 Measured streaming throughput (2026-11-07)
+
+Two runs of `nn4x2` with only the AG window length changed (same flow, same
+emitter, corrected fence-before-store ordering):
+
+| `S2_CAP_CYCLES` | samples | load | exec | store | total |
+|---|---|---|---|---|---|
+| 64 | 64 | 98 | 6 | 733 | 846 |
+| 128 | 128 | 98 | 5 | 765 | 879 |
+
+Slope = 33 cycles for 64 extra samples ≈ **0.52 cycles/sample**, i.e. the array
+absorbs ~1.9 samples per cycle once it is streaming. `nn4x2` computes 16
+operations per sample, so:
+
+```
+16 ops/sample ÷ 0.52 cycles/sample ≈ 31 ops/cycle
+31 / 64 ops/cycle ceiling ≈ 48 % of peak, sustained
+```
+
+This is the first measured throughput figure rather than a lower bound, and it
+changes the picture: **the array is not the problem — the launch path is.** The
+same runs spend 733–765 cycles in the capture DMA, so a 16-operation kernel
+achieves 16/846 ≈ 0.02 ops/cycle end-to-end while its steady-state rate is ~31.
+
+Caveats: the two runs have independent MCTS placements, so the slope carries
+placement noise; and 0.52 cycles/sample is below `exe_ii = 2`, which means the
+AG streams faster than one context per sample and the array pipelines several
+samples per context window. Both need a VCD-level check before being quoted as
+a hard number.
+
+## 4. What a LeNet-class workload needs
 
 | Requirement | Status |
 |---|---|

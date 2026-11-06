@@ -1,0 +1,46 @@
+{
+ "name": "nn4x3",
+ "params": {
+  "inputs": 4,
+  "outputs": 3,
+  "seed": 0
+ },
+ "weights": [
+  [
+   2,
+   2,
+   1,
+   2
+  ],
+  [
+   3,
+   2,
+   2,
+   2
+  ],
+  [
+   2,
+   2,
+   3,
+   1
+  ]
+ ],
+ "bias": [
+  2,
+  -1,
+  0
+ ],
+ "input_values": [
+  1,
+  2,
+  3,
+  4
+ ],
+ "compute_nodes": 24,
+ "expect": [
+  19,
+  20,
+  19
+ ],
+ "dfg": "nn4x3.json"
+}
