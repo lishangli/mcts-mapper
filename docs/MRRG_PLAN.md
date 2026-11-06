@@ -65,6 +65,38 @@ wrong source in one of the two phases. Mitigation: validate against RTL values
 attempting the 20-node case, and keep the feature behind `S2_SLOT_OCC`
 (default off) until those pass.
 
+
+## Implementation status (2026-11-07)
+
+Implemented behind `S2_SLOT_OCC=1` (default off):
+
+* `Occ` is keyed by `(gib, port, slot)` for both mux configuration and wire
+  reads; `slot=None` stays conservative and is blocked by any claim.
+* `path_slots(path, c0)` reproduces the per-hop context the router uses
+  (`ctx = c0 - par`, advanced by registered hops only).
+* Per node: parity-first routing at an estimated launch context `c0_est`, four
+  offsets tried (`c0_est..c0_est+3`) before falling back to the slot-agnostic
+  route; every winning path is claimed per bank.
+
+Measured:
+
+| Run | Result |
+|---|---|
+| `S2_SLOT_OCC=1 dfg_scale` | **PASS**, value 11 (RTL) |
+| default `dfg_mixed` | PASS, value 13 (refactor did not change the default path) |
+| `S2_SLOT_OCC=1` `l4w5o3c3`, 1 attempt | still fails: `no route 13->17 op1`, all four pins free, `free_hops=3` |
+
+So slot sharing is implemented and value-correct on a real case, but it is **not
+sufficient**: the remaining failure is the *delay palette*. A (source, pin) pair
+only accepts paths whose registered-hop count hits one residue mod 4, and
+`route_parity` visits each node once (deliberately, to avoid emitting two mux
+configs for one wire), so alternative parities through the same node are pruned.
+The next step is to give the router real delay freedom: visit states as
+`(wire, parity)` while keeping the one-config-per-wire invariant by construction
+(a wire's config is fixed by the edge that claims it, so parity states may only
+be explored for *distinct* wires), or to insert explicit 1-cycle delay hops on
+demand.
+
 ## Out of scope
 
 True modulo scheduling (II > 1 over loop iterations) stays out of scope for this

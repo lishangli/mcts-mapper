@@ -80,6 +80,10 @@ STRICT_OCC = os.environ.get('S2_OCC_STRICT', '0') == '1'
 # S2_RIPUP=0 disables the intra-node rip-up retry (second operand order), which
 # is the A/B control for "does routing order matter for this DFG".
 RIPUP = os.environ.get('S2_RIPUP', '1') == '1'
+# S2_SLOT_OCC=1 makes routing occupancy time-expanded (docs/MRRG_PLAN.md):
+# a GIB mux is claimed per config bank, so two paths can share a wire when
+# their values arrive in different contexts. Default off until RTL-validated.
+SLOT_OCC = os.environ.get('S2_SLOT_OCC', '0') == '1'
 
 class Occ:
     """Routing occupancy, keyed by (gib, port).
@@ -102,53 +106,103 @@ class Occ:
 
     def __contains__(self, key):
         """set-compatible `in`: anything owned at all (sched.Router.route uses it)"""
-        return key in self.cfg or key in self.rd
+        return (self._any_cfg(key) or (key[0], key[1], 0) in self.rd or
+                (key[0], key[1], 1) in self.rd or (key[0], key[1], None) in self.rd)
 
     def __len__(self):
         return len(self.cfg) + len(self.rd)
 
-    def write_ok(self, key, idx):
-        """may this path drive mux output `key` from input index `idx`?"""
+    def _any_cfg(self, key):
+        """is this wire configured at all (in any slot)?"""
+        return ((key[0], key[1], 0) in self.cfg or
+                (key[0], key[1], 1) in self.cfg or
+                (key[0], key[1], None) in self.cfg)
+
+    def write_ok(self, key, idx, slot=None):
+        """may this path drive mux output `key` from input index `idx`?
+
+        `slot` = config bank (ctx parity) the value arrives in. Two paths may own
+        the same wire when their slots differ, because a GIB has cfgA/cfgB and
+        only one of them is active in a given context (CGRA.scala ctx_ptr(0)).
+        slot=None means "unknown": such a claim must stay exclusive.
+        """
+        rd_used = ((key[0], key[1], 0) in self.rd or
+                   (key[0], key[1], 1) in self.rd or
+                   (key[0], key[1], None) in self.rd)
         if self.strict:
-            return key not in self          # legacy: exclusive, even for the same idx
-        if key in self.rd:
+            return not self._any_cfg(key) and not rd_used
+        if rd_used:
             return False                    # somebody reads this wire: don't touch it
-        idxs = self.cfg.get(key)
-        return idxs is None or idx in idxs
+        cands = (((key[0], key[1], 0), (key[0], key[1], 1), (key[0], key[1], None))
+                 if slot is None else
+                 ((key[0], key[1], slot), (key[0], key[1], None)))
+        for k in cands:
+            idxs = self.cfg.get(k)
+            if idxs is not None and idx not in idxs:
+                return False
+        return True
 
-    def read_ok(self, key):
-        """may this path take wire `key` as its source?"""
-        return key not in self.cfg and key not in self.rd
+    def read_ok(self, key, slot=None):
+        """may this path take wire `key` as its source?
 
-    def claim(self, path):
-        """mark everything a path touches; the marks are what release() reverts"""
+        Same slot argument as write_ok: a wire can serve a reader in the other
+        config bank, provided its driver is programmed there too.
+        """
+        if slot is None:
+            return (not self._any_cfg(key) and
+                    (key[0], key[1], 0) not in self.rd and
+                    (key[0], key[1], 1) not in self.rd and
+                    (key[0], key[1], None) not in self.rd)
+        if (key[0], key[1], None) in self.rd or key in self.rd:
+            return False
+        if (key[0], key[1], slot) in self.rd:
+            return False
+        for s in (slot, None):
+            if (key[0], key[1], s) in self.cfg:
+                return False
+        return True
+
+    def claim(self, path, slots=None):
+        """mark everything a path touches; the marks are what release() reverts.
+
+        `slots` is a per-hop config bank list (see path_slots) or None when the
+        schedule is not known yet, which claims both banks conservatively.
+        """
         marks = []
-        for ent in path:
+        for i, ent in enumerate(path):
             key = (ent[0], ent[1])
             idx = ent[2] if len(ent) > 2 else None
+            slot = None if slots is None else slots[i]
             if idx is None:
-                self.rd[key] = self.rd.get(key, 0) + 1
+                k3 = (key[0], key[1], slot)
+                self.rd[k3] = self.rd.get(k3, 0) + 1
+                marks.append((key, idx, slot))
             else:
-                d = self.cfg.setdefault(key, {})
+                k3 = (key[0], key[1], slot)
+                d = self.cfg.setdefault(k3, {})
                 d[idx] = d.get(idx, 0) + 1
-            marks.append((key, idx))
+                marks.append((key, idx, slot))
         if len(self) > self.peak:
             self.peak = len(self)
         return marks
 
     def release(self, marks):
-        for key, idx in marks:
+        for m in marks:
+            key, idx = m[0], m[1]
+            slot = m[2] if len(m) > 2 else None
             if idx is None:
-                n = self.rd.get(key, 0) - 1
-                if n > 0: self.rd[key] = n
-                else: self.rd.pop(key, None)
+                k3 = (key[0], key[1], slot)
+                n = self.rd.get(k3, 0) - 1
+                if n > 0: self.rd[k3] = n
+                else: self.rd.pop(k3, None)
                 continue
-            d = self.cfg.get(key)
+            k3 = (key[0], key[1], slot)
+            d = self.cfg.get(k3)
             if not d or idx not in d: continue
             if d[idx] > 1: d[idx] -= 1
             else:
                 del d[idx]
-                if not d: self.cfg.pop(key, None)
+                if not d: self.cfg.pop(k3, None)
 
     def stats(self):
         return 'cfg=%d rd=%d peak=%d' % (len(self.cfg), len(self.rd), self.peak)
@@ -235,7 +289,22 @@ def route_to_terms(start, terms, occ=()):
                 seen.add(node); q.append((node, pa + [(gib, dstport, idx)]))
     return None
 
-def route_parity(src_inst, dst_inst, port, want, occ=()):
+def path_slots(path, c0):
+    """config bank (ctx parity) each hop of `path` is active in.
+
+    `path` is stored destination-first. The value arrives at the consumer in
+    context `c0`; a node p registered hops before the consumer sees context
+    `c0 - p`, and the GIB bank that must select its source is `(c0 - p) & 1`.
+    Only registered hops advance the context (exe_ii = 2 cycles each).
+    """
+    slots, par = [], 0
+    for ent in path:
+        slots.append((c0 - par) & 1)
+        if is_reg(ent[0], ent[1]):
+            par = (par + 1) % 4
+    return slots
+
+def route_parity(src_inst, dst_inst, port, want, occ=(), c0=None):
     """route whose CYCLE delay == want (mod 4), reverse BFS from the dst input pin.
     Only registered otrack hops cost a cycle (77/153 GIBs are combinational), so
     hop count and delay differ and the ctx constraint must use the latter.
@@ -255,10 +324,11 @@ def route_parity(src_inst, dst_inst, port, want, occ=()):
             return pa
         if pa and occ.strict and (g, p) in occ: continue
         npar = (par + (1 if is_reg(g, p) else 0)) % 4
+        slot = None if c0 is None else (c0 - par) & 1
         for kind, gib, dstport, idx, src in r.preds(g, p):
             if kind == 'mux':
-                if not occ.write_ok((gib, dstport), idx): continue
-            elif pa and not occ.read_ok((g, p)):
+                if not occ.write_ok((gib, dstport), idx, slot): continue
+            elif pa and not occ.read_ok((g, p), slot):
                 continue
             node = src if kind == 'track' else (gib, src)
             if node in seen: continue
@@ -508,7 +578,7 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                 b = placement[nid]
                 return abs(a - b) if isinstance(a, int) and isinstance(b, int) else 0
 
-            def route_operands(seq_):
+            def route_operands(seq_, c0e=None):
                 """route in the given order; returns the failing edge or None."""
                 for e in seq_:
                     if is_stream(e.tail):
@@ -516,9 +586,33 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                     opnd = e.operand if e.operand in (0, 1) else 0
                     opnd_of[e.id] = opnd
                     OPND_ASSIGN[e.id] = opnd
-                    in_p, path = route_operand(PEBLK_INV[placement[e.tail]], di, opnd,
-                                               prefer=port_of.get(e.id), occ=occ,
-                                               used_ports=port_used.get(di, ()))
+                    src_pe = PEBLK_INV[placement[e.tail]]
+                    slots = None
+                    path = in_p = None
+                    if SLOT_OCC:
+                        # parity-first routing: pick the wanted config bank from
+                        # an estimated launch context, so the claim is slot-exact
+                        # and this edge can share wires with earlier ones
+                        want = ((c0_est if c0e is None else c0e)
+                                - ctx_of[e.tail]) % 4
+                        for cand in group_ports(di, opnd):
+                            if cand in port_used.get(di, ()):
+                                continue
+                            p2 = route_parity(src_pe, di, cand, want,
+                                              occ=occ,
+                                              c0=(c0_est if c0e is None else c0e))
+                            if p2:
+                                in_p, path = cand, p2
+                                slots = path_slots(p2, c0_est if c0e is None else c0e)
+                                break
+                    if path is None:
+                        # no parity path (or the feature is off): fall back to the
+                        # slot-agnostic route, claimed conservatively
+                        in_p, path = route_operand(src_pe, di, opnd,
+                                                   prefer=port_of.get(e.id),
+                                                   occ=occ,
+                                                   used_ports=port_used.get(di, ()))
+                        slots = None
                     if not path:
                         return e
                     port_used.setdefault(di, set()).add(in_p)
@@ -526,10 +620,13 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                     port_of[e.id] = in_p
                     # claim immediately: sibling edges of this same node must not
                     # be allowed to reuse a mux this edge already drives
-                    claimed[e.id] = occ.claim(path)
+                    claimed[e.id] = occ.claim(path, slots)
                 return None
 
             seq = [e for e in ins if not is_stream(e.tail)]
+            # provisional launch context: every operand arrives after at least one
+            # hop; the settle() step refines it once the real delays are known
+            c0_est = max([ctx_of[e.tail] + 1 for e in seq] + [1])
             pins_before = set(port_used.get(di, ()))
 
             def rewind():
@@ -541,10 +638,20 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                 if pins_before: port_used[di] = set(pins_before)
                 else: port_used.pop(di, None)
 
-            fail = route_operands(seq)
+            # A (src, dst) pair only accepts paths whose registered-hop delay hits
+            # one residue mod 4. When that palette is empty the whole node must be
+            # launched in another context; try the four offsets before giving up.
+            fail = None
+            c0_use = c0_est
+            for c0_use in ([c0_est + s for s in (0, 1, 2, 3)] if SLOT_OCC
+                           else [c0_est]):
+                fail = route_operands(seq, c0_use)
+                if fail is None:
+                    break
+                rewind()
             if fail is not None and RIPUP and len(seq) > 1:
                 rewind()
-                fail = route_operands(sorted(seq, key=dist_of, reverse=True))
+                fail = route_operands(sorted(seq, key=dist_of, reverse=True), c0_use)
             if (fail is not None and RIPUP and len(seq) == 2
                     and op_of[nid] in ('ADD', 'MUL')):
                 # ADD/MUL are commutative: swapping the operands moves one edge
@@ -565,6 +672,26 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                     for e in ins if e.id in hs}
             base_pins = {port_of[e.id] for e in ins if e.id in hs}
 
+            if SLOT_OCC:
+                # second pass: the first pass had no context, so its claims are
+                # slot-agnostic. Now that base_c0 is known, re-route every
+                # operand with its parity and re-claim per config bank; only
+                # then can a later node legally share the other bank.
+                for e in ins:
+                    if e.id not in hs or is_stream(e.tail):
+                        continue
+                    want = (base_c0 - ctx_of[e.tail]) % 4
+                    occ.release(claimed.pop(e.id, []))
+                    p2 = route_parity(PEBLK_INV[placement[e.tail]], di,
+                                      port_of[e.id], want, occ=occ, c0=base_c0)
+                    if p2 is None:
+                        claimed[e.id] = occ.claim(route_of[e.id])
+                        continue
+                    hs[e.id] = path_delay(p2); route_of[e.id] = p2
+                    claimed[e.id] = occ.claim(p2, path_slots(p2, base_c0))
+                base = {e.id: (port_of[e.id], route_of[e.id], hs[e.id])
+                        for e in ins if e.id in hs}
+
             def settle(c0):
                 """parity convergence for ONE bump level -> (ok, c0, dead edge).
 
@@ -582,7 +709,7 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                             # release own claim so the search may reuse its own wiring
                             occ.release(claimed[e.id]); claimed[e.id] = []
                             p2 = route_parity(PEBLK_INV[placement[e.tail]], di,
-                                              port_of[e.id], want, occ=occ)
+                                              port_of[e.id], want, occ=occ, c0=c0)
                             if p2 is None:
                                 # pin dead-ends under the parity+occ constraints: move
                                 # this operand to another free pin of the same mux group
@@ -590,7 +717,7 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                                     if cand == port_of[e.id]: continue
                                     if cand in port_used.get(di, ()): continue
                                     q = route_parity(PEBLK_INV[placement[e.tail]], di,
-                                                     cand, want, occ=occ)
+                                                     cand, want, occ=occ, c0=c0)
                                     if not q: continue
                                     port_used[di].discard(port_of[e.id])
                                     port_used[di].add(cand)
@@ -600,7 +727,8 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                             if not p2:
                                 return False, c0, e
                             hs[e.id] = path_delay(p2); route_of[e.id] = p2
-                            claimed[e.id] = occ.claim(p2)
+                            claimed[e.id] = occ.claim(
+                                p2, path_slots(p2, c0) if SLOT_OCC else None)
                     c0n = max([ctx_of[e.tail] + hs[e.id] for e in ins if e.id in hs] + [c0])
                     if c0n == c0: break
                     c0 = c0n
