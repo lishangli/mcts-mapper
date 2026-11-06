@@ -304,6 +304,16 @@ def route_to_terms(start, terms, occ=()):
                 seen.add(node); q.append((node, pa + [(gib, dstport, idx)]))
     return None
 
+ADG_POS = None
+
+def pe_xy(pe_inst):
+    """(x, y) of a PE instance / cfg block, cached"""
+    global ADG_POS
+    if ADG_POS is None:
+        ADG_POS = {x['id']: (x.get('x'), x.get('y'))
+                   for x in json.load(open(ADG_JSON))['instances']}
+    return ADG_POS.get(PEBLK.get(pe_inst, pe_inst), (999, 999))
+
 def path_slots(path, c0):
     """config bank (ctx parity) each hop of `path` is active in.
 
@@ -749,10 +759,18 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                 every context assigned so far remains valid (no silent timing
                 change). Rolls back completely when an attempt fails.
                 """
-                for k in (1, 2, 3, 4, 6, 8):
-                    if len(ROUTED) < k:
-                        break
-                    victims = ROUTED[-k:]
+                # Candidates: the most recent k edges, plus the edges whose
+                # destination is spatially near this one — the block is almost
+                # always in the destination's last-hop neighbourhood, which the
+                # "recent k" heuristic only hits by luck.
+                sets = [ROUTED[-k:] for k in (1, 2, 3, 4, 6, 8) if len(ROUTED) >= k]
+                dx, dy = pe_xy(di)
+                near = [v for v in ROUTED
+                        if v['dst'] != di and
+                        abs(pe_xy(v['dst'])[0] - dx) + abs(pe_xy(v['dst'])[1] - dy) <= 2]
+                if near:
+                    sets.append(near[-6:])
+                for victims in sets:
                     snap = (copy.deepcopy(occ.cfg), copy.deepcopy(occ.rd))
                     marks = [v['claimed'] for v in victims]
                     for v in victims:
