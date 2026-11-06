@@ -1,0 +1,22 @@
+{
+ "name": "chain12o2c3",
+ "params": {
+  "layers": 12,
+  "width": 1,
+  "outputs": 2,
+  "consts": 3,
+  "seed": 0,
+  "shape": "chain"
+ },
+ "objects": 19,
+ "edges": 26,
+ "compute_nodes": 12,
+ "inputs": 2,
+ "consts": 3,
+ "outputs": 2,
+ "expect": [
+  4,
+  6
+ ],
+ "dfg": "dfg_dag_chain12o2c3.json"
+}

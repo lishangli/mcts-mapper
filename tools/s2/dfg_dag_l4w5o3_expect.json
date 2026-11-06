@@ -1,0 +1,24 @@
+{
+ "name": "dag_l4w5o3c3_s0",
+ "params": {
+  "layers": 4,
+  "width": 5,
+  "outputs": 3,
+  "consts": 3,
+  "seed": 0,
+  "ops": "ADD,SUB,PASS",
+  "maxfanout": 2
+ },
+ "objects": 28,
+ "edges": 43,
+ "compute_nodes": 20,
+ "inputs": 2,
+ "consts": 3,
+ "outputs": 3,
+ "expect": [
+  6,
+  12,
+  -10
+ ],
+ "dfg": "dfg_dag_l4w5o3.json"
+}

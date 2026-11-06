@@ -1,0 +1,18 @@
+{"name": "chain4", "directed": true,
+ "objects": [
+  {"_gvid": 0, "opcode": "INPUT", "name": "CONST1", "ref_name": "%const1", "pattern": "4, 91", "size": "256", "offset": "0, 0"},
+  {"_gvid": 1, "opcode": "INPUT", "name": "CONST2", "ref_name": "%const2", "pattern": "4, 91", "size": "256", "offset": "0, 0"},
+  {"_gvid": 2, "opcode": "SUB", "name": "SUB3"},
+  {"_gvid": 3, "opcode": "ADD", "name": "ADD4"},
+  {"_gvid": 4, "opcode": "ADD", "name": "ADD5"},
+  {"_gvid": 5, "opcode": "OUTPUT", "name": "OUTPUT6", "ref_name": "%out0", "pattern": "4, 91", "size": "256", "offset": "0, 0"}
+ ],
+ "edges": [
+  {"_gvid": 0, "tail": 0, "head": 2, "operand": 0},
+  {"_gvid": 1, "tail": 1, "head": 2, "operand": 1},
+  {"_gvid": 2, "tail": 2, "head": 3, "operand": 0},
+  {"_gvid": 3, "tail": 3, "head": 4, "operand": 0},
+  {"_gvid": 4, "tail": 4, "head": 5, "operand": 0},
+  {"_gvid": 5, "tail": 0, "head": 3, "operand": 1},
+  {"_gvid": 6, "tail": 1, "head": 4, "operand": 1}
+ ]}

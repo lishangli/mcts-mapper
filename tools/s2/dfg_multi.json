@@ -1,0 +1,90 @@
+{
+ "name": "multi",
+ "directed": true,
+ "objects": [
+  {
+   "_gvid": 0,
+   "opcode": "INPUT",
+   "name": "CONST1",
+   "ref_name": "%const1",
+   "pattern": "4, 91",
+   "size": "256",
+   "offset": "0, 0"
+  },
+  {
+   "_gvid": 1,
+   "opcode": "INPUT",
+   "name": "CONST2",
+   "ref_name": "%const2",
+   "pattern": "4, 91",
+   "size": "256",
+   "offset": "0, 0"
+  },
+  {
+   "_gvid": 2,
+   "opcode": "ADD",
+   "name": "A"
+  },
+  {
+   "_gvid": 3,
+   "opcode": "SUB",
+   "name": "B"
+  },
+  {
+   "_gvid": 4,
+   "opcode": "OUTPUT",
+   "name": "OUTA",
+   "ref_name": "%out0",
+   "pattern": "4, 91",
+   "size": "256",
+   "offset": "0, 0"
+  },
+  {
+   "_gvid": 5,
+   "opcode": "OUTPUT",
+   "name": "OUTB",
+   "ref_name": "%out1",
+   "pattern": "4, 91",
+   "size": "256",
+   "offset": "0, 0"
+  }
+ ],
+ "edges": [
+  {
+   "_gvid": 0,
+   "tail": 0,
+   "head": 2,
+   "operand": 0
+  },
+  {
+   "_gvid": 1,
+   "tail": 1,
+   "head": 2,
+   "operand": 1
+  },
+  {
+   "_gvid": 2,
+   "tail": 0,
+   "head": 3,
+   "operand": 0
+  },
+  {
+   "_gvid": 3,
+   "tail": 1,
+   "head": 3,
+   "operand": 1
+  },
+  {
+   "_gvid": 4,
+   "tail": 2,
+   "head": 4,
+   "operand": 0
+  },
+  {
+   "_gvid": 5,
+   "tail": 3,
+   "head": 5,
+   "operand": 0
+  }
+ ]
+}

@@ -1,0 +1,15 @@
+{
+ "name": "const",
+ "directed": true,
+ "objects": [
+  {"_gvid": 0, "opcode": "CONST", "name": "%c1", "value": "3"},
+  {"_gvid": 1, "opcode": "CONST", "name": "%c2", "value": "5"},
+  {"_gvid": 2, "opcode": "ADD", "name": "ADD3"},
+  {"_gvid": 3, "opcode": "OUTPUT", "name": "OUT4", "ref_name": "%out0", "pattern": "4, 91", "size": "256", "offset": "0, 0"}
+ ],
+ "edges": [
+  {"_gvid": 0, "tail": 0, "head": 2, "operand": 0},
+  {"_gvid": 1, "tail": 1, "head": 2, "operand": 1},
+  {"_gvid": 2, "tail": 2, "head": 3, "operand": 0}
+ ]
+}

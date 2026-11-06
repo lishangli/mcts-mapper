@@ -4,3 +4,12 @@ exp_data/
 .git/
 
 models/
+
+# S2 toolchain build artefacts (regenerate with tools/s2/run_dfg.sh)
+tools/s2/*.log
+tools/s2/*.riscv
+tools/s2/*.vcd
+tools/s2/main_s2.c
+tools/s2/cgra_execute.c
+tools/s2/bridge_meta.json
+tools/s2/__pycache__/

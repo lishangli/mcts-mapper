@@ -1,0 +1,75 @@
+{
+ "name": "pack2",
+ "directed": true,
+ "objects": [
+  {
+   "_gvid": 0,
+   "opcode": "INPUT",
+   "name": "CONST1",
+   "ref_name": "%const1",
+   "pattern": "4, 91",
+   "size": "256",
+   "offset": "0, 0"
+  },
+  {
+   "_gvid": 1,
+   "opcode": "INPUT",
+   "name": "CONST2",
+   "ref_name": "%const2",
+   "pattern": "4, 91",
+   "size": "256",
+   "offset": "0, 0"
+  },
+  {
+   "_gvid": 2,
+   "opcode": "ADD",
+   "name": "ADD3"
+  },
+  {
+   "_gvid": 3,
+   "opcode": "SUB",
+   "name": "SUB4"
+  },
+  {
+   "_gvid": 4,
+   "opcode": "OUTPUT",
+   "name": "OUT5",
+   "ref_name": "%out0",
+   "pattern": "4, 91",
+   "size": "256",
+   "offset": "0, 0"
+  }
+ ],
+ "edges": [
+  {
+   "_gvid": 0,
+   "tail": 0,
+   "head": 2,
+   "operand": 0
+  },
+  {
+   "_gvid": 1,
+   "tail": 1,
+   "head": 2,
+   "operand": 1
+  },
+  {
+   "_gvid": 2,
+   "tail": 2,
+   "head": 3,
+   "operand": 0
+  },
+  {
+   "_gvid": 3,
+   "tail": 1,
+   "head": 3,
+   "operand": 1
+  },
+  {
+   "_gvid": 4,
+   "tail": 3,
+   "head": 4,
+   "operand": 0
+  }
+ ]
+}

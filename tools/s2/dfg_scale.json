@@ -1,0 +1,135 @@
+{
+ "name": "scale",
+ "directed": true,
+ "objects": [
+  {
+   "_gvid": 0,
+   "opcode": "INPUT",
+   "name": "CONST1",
+   "ref_name": "%const1",
+   "pattern": "4, 91",
+   "size": "256",
+   "offset": "0, 0"
+  },
+  {
+   "_gvid": 1,
+   "opcode": "CONST",
+   "name": "%c5",
+   "value": "5"
+  },
+  {
+   "_gvid": 2,
+   "opcode": "CONST",
+   "name": "%c3",
+   "value": "3"
+  },
+  {
+   "_gvid": 3,
+   "opcode": "CONST",
+   "name": "%c7",
+   "value": "7"
+  },
+  {
+   "_gvid": 4,
+   "opcode": "ADD",
+   "name": "X"
+  },
+  {
+   "_gvid": 5,
+   "opcode": "SUB",
+   "name": "Y"
+  },
+  {
+   "_gvid": 6,
+   "opcode": "ADD",
+   "name": "Z"
+  },
+  {
+   "_gvid": 7,
+   "opcode": "ADD",
+   "name": "W"
+  },
+  {
+   "_gvid": 8,
+   "opcode": "SUB",
+   "name": "O"
+  },
+  {
+   "_gvid": 9,
+   "opcode": "OUTPUT",
+   "name": "OUT",
+   "ref_name": "%out0",
+   "pattern": "4, 91",
+   "size": "256",
+   "offset": "0, 0"
+  }
+ ],
+ "edges": [
+  {
+   "_gvid": 0,
+   "tail": 0,
+   "head": 4,
+   "operand": 0
+  },
+  {
+   "_gvid": 1,
+   "tail": 1,
+   "head": 4,
+   "operand": 1
+  },
+  {
+   "_gvid": 2,
+   "tail": 4,
+   "head": 5,
+   "operand": 0
+  },
+  {
+   "_gvid": 3,
+   "tail": 2,
+   "head": 5,
+   "operand": 1
+  },
+  {
+   "_gvid": 4,
+   "tail": 4,
+   "head": 6,
+   "operand": 0
+  },
+  {
+   "_gvid": 5,
+   "tail": 1,
+   "head": 6,
+   "operand": 1
+  },
+  {
+   "_gvid": 6,
+   "tail": 5,
+   "head": 7,
+   "operand": 0
+  },
+  {
+   "_gvid": 7,
+   "tail": 6,
+   "head": 7,
+   "operand": 1
+  },
+  {
+   "_gvid": 8,
+   "tail": 7,
+   "head": 8,
+   "operand": 0
+  },
+  {
+   "_gvid": 9,
+   "tail": 3,
+   "head": 8,
+   "operand": 1
+  },
+  {
+   "_gvid": 10,
+   "tail": 8,
+   "head": 9,
+   "operand": 0
+  }
+ ]
+}

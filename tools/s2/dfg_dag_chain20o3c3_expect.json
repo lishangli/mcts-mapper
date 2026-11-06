@@ -1,0 +1,23 @@
+{
+ "name": "chain20o3c3",
+ "params": {
+  "layers": 20,
+  "width": 1,
+  "outputs": 3,
+  "consts": 3,
+  "seed": 0,
+  "shape": "chain"
+ },
+ "objects": 28,
+ "edges": 43,
+ "compute_nodes": 20,
+ "inputs": 2,
+ "consts": 3,
+ "outputs": 3,
+ "expect": [
+  8,
+  4,
+  6
+ ],
+ "dfg": "dfg_dag_chain20o3c3.json"
+}

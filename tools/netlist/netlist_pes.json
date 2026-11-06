@@ -1,0 +1,4610 @@
+{
+ "0": {
+  "blk": 35,
+  "module": "GPE",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "1": {
+  "blk": 36,
+  "module": "GPE_1",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "2": {
+  "blk": 37,
+  "module": "GPE_2",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "3": {
+  "blk": 38,
+  "module": "GPE_3",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "4": {
+  "blk": 39,
+  "module": "GPE_4",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "5": {
+  "blk": 40,
+  "module": "GPE_5",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "6": {
+  "blk": 41,
+  "module": "GPE_6",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "7": {
+  "blk": 42,
+  "module": "GPE_7",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "8": {
+  "blk": 43,
+  "module": "GPE_8",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "9": {
+  "blk": 44,
+  "module": "GPE_9",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "10": {
+  "blk": 45,
+  "module": "GPE_10",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "11": {
+  "blk": 46,
+  "module": "GPE_11",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "12": {
+  "blk": 47,
+  "module": "GPE_12",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "13": {
+  "blk": 48,
+  "module": "GPE_13",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "14": {
+  "blk": 49,
+  "module": "GPE_14",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "15": {
+  "blk": 50,
+  "module": "GPE_15",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "32",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "32",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "16": {
+  "blk": 69,
+  "module": "GPE_16",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "17": {
+  "blk": 70,
+  "module": "GPE_17",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "18": {
+  "blk": 71,
+  "module": "GPE_18",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "19": {
+  "blk": 72,
+  "module": "GPE_19",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "20": {
+  "blk": 73,
+  "module": "GPE_20",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "21": {
+  "blk": 74,
+  "module": "GPE_21",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "22": {
+  "blk": 75,
+  "module": "GPE_22",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "23": {
+  "blk": 76,
+  "module": "GPE_23",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "24": {
+  "blk": 77,
+  "module": "GPE_24",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "25": {
+  "blk": 78,
+  "module": "GPE_25",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "26": {
+  "blk": 79,
+  "module": "GPE_26",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "27": {
+  "blk": 80,
+  "module": "GPE_27",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "28": {
+  "blk": 81,
+  "module": "GPE_28",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "29": {
+  "blk": 82,
+  "module": "GPE_29",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "30": {
+  "blk": 83,
+  "module": "GPE_30",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "31": {
+  "blk": 84,
+  "module": "GPE_31",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "32": {
+  "blk": 103,
+  "module": "GPE_32",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "33": {
+  "blk": 104,
+  "module": "GPE_33",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "34": {
+  "blk": 105,
+  "module": "GPE_34",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "35": {
+  "blk": 106,
+  "module": "GPE_35",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "36": {
+  "blk": 107,
+  "module": "GPE_36",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "37": {
+  "blk": 108,
+  "module": "GPE_37",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "38": {
+  "blk": 109,
+  "module": "GPE_38",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "39": {
+  "blk": 110,
+  "module": "GPE_39",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "40": {
+  "blk": 111,
+  "module": "GPE_40",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "41": {
+  "blk": 112,
+  "module": "GPE_41",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "42": {
+  "blk": 113,
+  "module": "GPE_42",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "43": {
+  "blk": 114,
+  "module": "GPE_43",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "44": {
+  "blk": 115,
+  "module": "GPE_44",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "45": {
+  "blk": 116,
+  "module": "GPE_45",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "46": {
+  "blk": 117,
+  "module": "GPE_46",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "47": {
+  "blk": 118,
+  "module": "GPE_47",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "48": {
+  "blk": 137,
+  "module": "GPE_48",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "49": {
+  "blk": 138,
+  "module": "GPE_49",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "50": {
+  "blk": 139,
+  "module": "GPE_50",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "51": {
+  "blk": 140,
+  "module": "GPE_51",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "52": {
+  "blk": 141,
+  "module": "GPE_52",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "53": {
+  "blk": 142,
+  "module": "GPE_53",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "54": {
+  "blk": 143,
+  "module": "GPE_54",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "55": {
+  "blk": 144,
+  "module": "GPE_55",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "56": {
+  "blk": 145,
+  "module": "GPE_56",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "57": {
+  "blk": 146,
+  "module": "GPE_57",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "58": {
+  "blk": 147,
+  "module": "GPE_58",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "59": {
+  "blk": 148,
+  "module": "GPE_59",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "60": {
+  "blk": 149,
+  "module": "GPE_60",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "61": {
+  "blk": 150,
+  "module": "GPE_61",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "62": {
+  "blk": 151,
+  "module": "GPE_62",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "63": {
+  "blk": 152,
+  "module": "GPE_63",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "64": {
+  "blk": 171,
+  "module": "GPE_64",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "65": {
+  "blk": 172,
+  "module": "GPE_65",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "66": {
+  "blk": 173,
+  "module": "GPE_66",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "67": {
+  "blk": 174,
+  "module": "GPE_67",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "68": {
+  "blk": 175,
+  "module": "GPE_68",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "69": {
+  "blk": 176,
+  "module": "GPE_69",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "70": {
+  "blk": 177,
+  "module": "GPE_70",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "71": {
+  "blk": 178,
+  "module": "GPE_71",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "72": {
+  "blk": 179,
+  "module": "GPE_72",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "73": {
+  "blk": 180,
+  "module": "GPE_73",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "74": {
+  "blk": 181,
+  "module": "GPE_74",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "75": {
+  "blk": 182,
+  "module": "GPE_75",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "76": {
+  "blk": 183,
+  "module": "GPE_76",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "77": {
+  "blk": 184,
+  "module": "GPE_77",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "78": {
+  "blk": 185,
+  "module": "GPE_78",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "79": {
+  "blk": 186,
+  "module": "GPE_79",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "80": {
+  "blk": 205,
+  "module": "GPE_80",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "81": {
+  "blk": 206,
+  "module": "GPE_81",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "82": {
+  "blk": 207,
+  "module": "GPE_82",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "83": {
+  "blk": 208,
+  "module": "GPE_83",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "84": {
+  "blk": 209,
+  "module": "GPE_84",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "85": {
+  "blk": 210,
+  "module": "GPE_85",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "86": {
+  "blk": 211,
+  "module": "GPE_86",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "87": {
+  "blk": 212,
+  "module": "GPE_87",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "88": {
+  "blk": 213,
+  "module": "GPE_88",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "89": {
+  "blk": 214,
+  "module": "GPE_89",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "90": {
+  "blk": 215,
+  "module": "GPE_90",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "91": {
+  "blk": 216,
+  "module": "GPE_91",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "92": {
+  "blk": 217,
+  "module": "GPE_92",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "93": {
+  "blk": 218,
+  "module": "GPE_93",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "94": {
+  "blk": 219,
+  "module": "GPE_94",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "95": {
+  "blk": 220,
+  "module": "GPE_95",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "96": {
+  "blk": 239,
+  "module": "GPE_96",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "97": {
+  "blk": 240,
+  "module": "GPE_97",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "98": {
+  "blk": 241,
+  "module": "GPE_98",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "99": {
+  "blk": 242,
+  "module": "GPE_99",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "100": {
+  "blk": 243,
+  "module": "GPE_100",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "101": {
+  "blk": 244,
+  "module": "GPE_101",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "102": {
+  "blk": 245,
+  "module": "GPE_102",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "103": {
+  "blk": 246,
+  "module": "GPE_103",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "104": {
+  "blk": 247,
+  "module": "GPE_104",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "105": {
+  "blk": 248,
+  "module": "GPE_105",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "106": {
+  "blk": 249,
+  "module": "GPE_106",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "107": {
+  "blk": 250,
+  "module": "GPE_107",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "108": {
+  "blk": 251,
+  "module": "GPE_108",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "109": {
+  "blk": 252,
+  "module": "GPE_109",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "110": {
+  "blk": 253,
+  "module": "GPE_110",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "111": {
+  "blk": 254,
+  "module": "GPE_111",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "112": {
+  "blk": 273,
+  "module": "GPE_112",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "32",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "32",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "113": {
+  "blk": 274,
+  "module": "GPE_113",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "114": {
+  "blk": 275,
+  "module": "GPE_114",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "115": {
+  "blk": 276,
+  "module": "GPE_115",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "116": {
+  "blk": 277,
+  "module": "GPE_116",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "117": {
+  "blk": 278,
+  "module": "GPE_117",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "118": {
+  "blk": 279,
+  "module": "GPE_118",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "119": {
+  "blk": 280,
+  "module": "GPE_119",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "120": {
+  "blk": 281,
+  "module": "GPE_120",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "121": {
+  "blk": 282,
+  "module": "GPE_121",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "122": {
+  "blk": 283,
+  "module": "GPE_122",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "123": {
+  "blk": 284,
+  "module": "GPE_123",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "124": {
+  "blk": 285,
+  "module": "GPE_124",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "125": {
+  "blk": 286,
+  "module": "GPE_125",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "126": {
+  "blk": 287,
+  "module": "GPE_126",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ },
+ "127": {
+  "blk": 288,
+  "module": "GPE_127",
+  "mux": {
+   "rdu_io_in_0": {
+    "cfg": [
+     47,
+     45
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_0",
+     "io_in_1",
+     "io_in_2",
+     "io_in_3",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   },
+   "rdu_io_in_1": {
+    "cfg": [
+     50,
+     48
+    ],
+    "srcs": [
+     "cfgOut[31:0]",
+     "io_in_4",
+     "io_in_5",
+     "io_in_6",
+     "io_in_7",
+     "dmr_io_out_1",
+     "rf_io_out_1"
+    ]
+   }
+  }
+ }
+}
