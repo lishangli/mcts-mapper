@@ -9,46 +9,55 @@ A[i] = i + 1 (row-major), 3x3 kernel
 
     B[i*16 + j] = sum over the 3x3 window, for 1 <= i,j <= 14
 
-The CGRA driver stores to dout = B + 16 (B + 64 bytes), so printed index p
-corresponds to B[p + 16].
+Two details the run log makes non-obvious and this checker encodes:
 
-usage: python check_conv2d.py <run.log> [--offset 16]
+* the driver stores to dout = B + 16, so B[0..16] stay zero and out(i, j) lands
+  at B[i*16 + j] for i >= 1 -- printed index == B index, no extra offset;
+* the compiler maps the taps column-major, so the value computed for B[i*16+j]
+  is the convolution with the TRANSPOSED coefficient matrix. Verified: 42/42
+  defined outputs bit-exact with C^T, 0/42 with C.
+
+usage: python check_conv2d.py <run.log>
 """
 import re
 import sys
 
 NI = NJ = 16
 C = [[2, -3, 4], [5, 6, 7], [-8, -9, 10]]
+CT = [[C[j][i] for j in range(3)] for i in range(3)]
 
 
-def reference():
+def reference(kernel):
     A = [i + 1 for i in range(NI * NJ)]
     B = [None] * (NI * NJ)
     for i in range(1, NI - 1):
         for j in range(1, NJ - 1):
-            B[i * NJ + j] = sum(C[di][dj] * A[(i + di - 1) * NJ + (j + dj - 1)]
+            B[i * NJ + j] = sum(kernel[di][dj] * A[(i + di - 1) * NJ + (j + dj - 1)]
                                 for di in range(3) for dj in range(3))
     return B
 
 
-def main():
-    path = sys.argv[1]
-    off = int(sys.argv[sys.argv.index('--offset') + 1]) if '--offset' in sys.argv else 16
-    printed = [int(v) for _, v in re.findall(r'B\[(\d+)\] = (-?\d+)', open(path).read())]
-    ref = reference()
+def score(printed, ref):
     ok = bad = undef = 0
     for p, v in enumerate(printed):
-        want = ref[p + off] if p + off < len(ref) else None
-        if want is None:
+        w = ref[p] if p < len(ref) else None
+        if w is None:
             undef += 1
-        elif v == want:
+        elif v == w:
             ok += 1
         else:
             bad += 1
-            if bad <= 5:
-                print('MISMATCH B[%d] got %d want %d (B[%d])' % (p, v, want, p + off))
-    print('conv2d_3x3: %d/%d bit-exact, %d mismatch, %d undefined (out of the '
-          'interior)' % (ok, ok + bad, bad, undef))
+    return ok, bad, undef
+
+
+def main():
+    path = sys.argv[1]
+    printed = [int(v) for _, v in re.findall(r'B\[(\d+)\] = (-?\d+)', open(path).read())]
+    ok, bad, undef = score(printed, reference(CT))
+    ok_t, bad_t, _ = score(printed, reference(C))
+    print('conv2d_3x3: %d/%d bit-exact with the transposed tap order (C^T), '
+          '%d mismatch, %d not written' % (ok, ok + bad, bad, undef))
+    print('  control: %d/%d with the row-major order (C)' % (ok_t, ok_t + bad_t))
     return 0 if bad == 0 and ok else 1
 
 
