@@ -209,6 +209,37 @@ generated code rather than from the RISC-V side alone. Two points are enough to
 fix the shape, not the constants: the constants need the AG start offset and the
 per-channel beat count, which the current run log does not carry yet.
 
+
+### 3.5 The store phase is not what it looked like (2026-11-07, later)
+
+Re-measuring `dfg_scale` with the store length halved, now that the fence sits
+before the store:
+
+| `S2_STORE_BYTES` | load | exec | store | total |
+|---|---|---|---|---|
+| 64 | 25 | 5 | 6 | 310 |
+| 512 | 25 | 5 | **6** | 295 |
+
+The store phase reads 6 cycles in **both** cases, so the printed `store` is only
+the issue latency; the transfer itself lands in the trailing `fence(1)`, which is
+inside `total` but not inside `store`. In `nn4x2` the same field read 733 — the
+DMA engine blocks the store instruction when it is still busy, so `store` is not
+a stable component across kernels.
+
+What this means for the numbers already published:
+
+* `total` (through `fence`) is the only trustworthy field; the per-phase split is
+  indicative, not additive;
+* end-to-end utilisation figures should be computed from `total` only
+  (`nn4x2`: 16 ops / 846 cycles ≈ 0.019 ops/cycle);
+* the streaming slope (33 cycles / 64 samples) came from two `total` values with
+  the same structure, so it is unaffected by this, but it still needs a VCD check
+  because both runs amortise the same trailing fence over different windows.
+
+A stable decomposition needs either (a) a counter inside the CGRA, or (b) VCD
+instrumentation of the IOB handshake; the RISC-V-side `rdcycle` around DMA calls
+cannot separate issue from completion.
+
 ## 4. What this implies for neural-network workloads
 
 * The array executes **64 integer ops/cycle at peak**; a LeNet-class convolution
