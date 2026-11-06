@@ -998,12 +998,15 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
         mn = '#include <stdio.h>\n#include <stdint.h>\n'
         mn += 'extern void cgra_execute0(void** din_addr, void** dout_addr);\n'
         for i in range(len(caps)):
-            mn += 'int O%d[128] __attribute__((aligned(64)));\n' % i
+            mn += ('int O%d[%d] __attribute__((aligned(64)));\n'
+                   % (i, max(128, CAP_CYCLES)))
         for si, n, val in din_meta:
-            mn += 'int c%d[64] __attribute__((aligned(64)));\n' % si
+            mn += ('int c%d[%d] __attribute__((aligned(64)));\n'
+                   % (si, max(64, CAP_CYCLES)))
         mn += 'int main(void) {\n'
         for si, n, val in din_meta:
-            mn += '  for (int i = 0; i < 64; i++) c%d[i] = %d;\n' % (si, val)
+            mn += ('  for (int i = 0; i < %d; i++) c%d[i] = %d;\n'
+                   % (max(64, CAP_CYCLES), si, val))
         mn += '  void* din[%d]; void* dout[%d];\n' % (max(len(din_meta), 1), len(caps))
         for si, n, val in din_meta:
             mn += '  din[%d] = (void*)c%d;\n' % (si, si)

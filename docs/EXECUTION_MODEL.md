@@ -240,6 +240,36 @@ A stable decomposition needs either (a) a counter inside the CGRA, or (b) VCD
 instrumentation of the IOB handshake; the RISC-V-side `rdcycle` around DMA calls
 cannot separate issue from completion.
 
+
+### 3.6 Window-slope validation failed (2026-11-07, final)
+
+Attempting to confirm the slope with correct input buffers (arrays sized by the
+window, fill loop extended):
+
+| `S2_CAP_CYCLES` | total | captured value | expected |
+|---|---|---|---|
+| 64 | 334 | 11 | 11 ✓ |
+| 128 | **377** | **5** | 11 ✗ |
+
+The 64→128 delta is 43 cycles, but the 128-sample run produces the **wrong
+value**, so its timing cannot be used to derive a throughput figure: the
+capture path is only correct for a 64-sample window in this driver (the IOB
+bank/AG configuration does not extend to 128 samples as emitted). The earlier
+0.52 cycles/sample number came from the same broken configuration and is
+**retracted**.
+
+Verified end-to-end figures therefore remain the low ones:
+
+| kernel | ops | total | ops/cycle |
+|---|---|---|---|
+| `nn4x2` | 16 | 846 | 0.019 |
+| `dfg_scale` | 5 | 334 | 0.015 |
+
+A defensible steady-state number needs a cycle counter **inside** the CGRA (or
+VCD-level IOB handshake capture); the RISC-V-side `rdcycle` cannot see the array
+internals, and widening the AG window breaks value correctness in the current
+driver. That is the next concrete piece of work.
+
 ## 4. What this implies for neural-network workloads
 
 * The array executes **64 integer ops/cycle at peak**; a LeNet-class convolution
