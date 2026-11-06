@@ -156,8 +156,33 @@ after it. The residual does **not** track `exec` (25 vs 4) but does track
 `load` (60 vs 25 → tail 43 vs 3), i.e. the cost is dominated by how much has to
 be shuttled in and out, not by the datapath.
 
+### 3.2 Controlled experiments (why the constants stayed open)
+
+Two knobs were added so the terms can be varied independently:
+`S2_CAP_CYCLES` (AG window length, default 64) and `S2_STORE_BYTES` (capture DMA
+length, default 512). Both were run on `dfg_scale`:
+
+| variant | load | exec | store | total |
+|---|---|---|---|---|
+| default (64 cycles, 512 B) | 25 | 4 | 6 | 67 |
+| `S2_CAP_CYCLES=32` | 25 | 4 | 6 | **67** |
+| `S2_STORE_BYTES=256` | 25 | 5 | 6 | **68** |
+
+Halving the window and halving the store change nothing. So `total` is **not**
+capture-window-bound and not store-size-bound: the capture path runs
+concurrently with the command stream and the fence does not wait for the full
+window. What dominates is a fixed launch cost (config + input DMA + execute +
+fence), 34–107 cycles depending on the DFG.
+
+That also re-frames the NN utilisation number: `nn3x2` at 34 cycles is almost
+entirely launch overhead, so "0.55 % of the array" measures the kernel's size,
+not a throughput limit of the array. A throughput claim needs a kernel whose
+work exceeds this fixed cost by a wide margin — i.e. exactly the >12-node
+layers the mapping ceiling currently blocks.
+
 ```
-total ≈ max(64, load + exec + store) + tail,  tail ≈ load − 22   (2 points, fit TBD)
+total ≈ launch(dfg)            # measured 34..107 cycles, DFG-dependent
+        + DMA(bytes)           # not the capture window, see 3.2
 ```
 
 The fence column (total − load − exec − store) is 32 and 11 cycles respectively;

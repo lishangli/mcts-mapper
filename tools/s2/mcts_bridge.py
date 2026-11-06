@@ -467,9 +467,15 @@ def iob_cfg(fields):
     for k, v in fields.items():
         cfg |= (v & ((1 << WID[k]) - 1)) << POS[k]
     return [(cfg >> (32 * i)) & 0xFFFFFFFF for i in range(4)]
+# Capture window and store size are parameters, not constants, so the timing
+# model can be fitted from controlled runs (docs/EXECUTION_MODEL.md §3).
+CAP_CYCLES = int(os.environ.get('S2_CAP_CYCLES', '64'))
+STORE_BYTES = int(os.environ.get('S2_STORE_BYTES', '512'))
+
 def iob_rows(n, is_store, mux):
-    iw = iob_cfg({'BaseAddr': (n % 16) * 1024, 'Stride0': 1, 'Cycles0': 64,
-                  'II': 1, 'IsStore': is_store, 'Muxn': mux})
+    iw = iob_cfg({'BaseAddr': (n % 16) * 1024, 'Stride0': 1,
+                  'Cycles0': CAP_CYCLES, 'II': 1, 'IsStore': is_store,
+                  'Muxn': mux})
     blk_io = n + 1 if n < 16 else n + 291
     return [((blk_io << 3) | i, iw[i]) for i in range(4)]
 
@@ -937,7 +943,8 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
         for si, n, val in din_meta: iob_ens |= (1 << n)
         ld = ''.join('\tload_data(din_addr[%d], 0x%x, 256, 0, 0, 0);\n' % (si, n * 4096)
                      for si, n, val in din_meta)
-        st = ''.join('\tstore(dout_addr[%d], 0x%x, 512, 0, 0);\n' % (i, s * 4096)
+        st = ''.join('\tstore(dout_addr[%d], 0x%x, %d, 0, 0);\n'
+                     % (i, s * 4096, STORE_BYTES)
                      for i, (s, _) in enumerate(caps))
         # s2_rdcycle brackets each phase so the run log carries the hardware cost
         # of one kernel (docs/EXECUTION_MODEL.md): load = config+input DMA,
