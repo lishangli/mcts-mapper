@@ -38,7 +38,10 @@ MODEL = (sys.argv[2] if len(sys.argv) > 2
          else os.environ.get('S2_MODEL')
          or os.path.join(REPO, 'models', 'best-agent.pt'))
 OUT_DIR = os.environ.get('S2_OUT_DIR') or D
+# Input stream values by ref_name. gen_nn.py feeds x0..x7 with 1..8 so a
+# dot-product layer has distinct activations; %const1/2 keep the old DAG cases.
 CONST_VALUES = {'%const1': 3, '%const2': 5, 'CONST1': 3, 'CONST2': 5}
+CONST_VALUES.update({'%%x%d' % i: i + 1 for i in range(8)})
 PEBLK = {int(k): v for k, v in json.load(open(
     os.path.join(NET, 'pe_blk_map.json'))).items()}
 PEBLK_INV = {v: k for k, v in PEBLK.items()}

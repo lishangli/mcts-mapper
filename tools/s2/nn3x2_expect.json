@@ -1,0 +1,35 @@
+{
+ "name": "nn3x2",
+ "params": {
+  "inputs": 3,
+  "outputs": 2,
+  "seed": 0
+ },
+ "weights": [
+  [
+   2,
+   2,
+   1
+  ],
+  [
+   2,
+   3,
+   2
+  ]
+ ],
+ "bias": [
+  1,
+  0
+ ],
+ "input_values": [
+  1,
+  2,
+  3
+ ],
+ "compute_nodes": 12,
+ "expect": [
+  10,
+  14
+ ],
+ "dfg": "nn3x2.json"
+}
