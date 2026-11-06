@@ -84,6 +84,31 @@ Two things this establishes with verified-correct runs:
 Earlier figures (0.52 cycles/sample, 31 ops/cycle) came from runs whose values
 were wrong and are withdrawn.
 
+
+### 3.5 The 20-node DAG at batch 128 (best verified throughput)
+
+`dfg_dag_l4w5o3c3` (20 compute nodes, 3 capture channels) with a 128-sample
+window:
+
+| kernel | samples | ops | load | store | total | ops/cycle | value |
+|---|---|---|---|---|---|---|---|
+| `l4w5o3c3` | 128 | 2560 | 104 | 720 | 861 | **2.97** | [6, 6, 4] ✓ |
+
+That is the best verified figure so far (4.6 % of the 64 ops/cycle ceiling), and
+it is higher than `nn4x2` at the same idea (1.98) simply because the kernel has
+20 operations per sample instead of 16 with a similar launch cost — the same
+amortisation argument, measured.
+
+Two routing experiments are recorded as negative results so they are not
+repeated blindly:
+
+* routing the constant streams **before** the compute edges (to avoid
+  `no const IOB`) makes the 24-node case fail *earlier* (28 nodes instead of
+  46): the streams' reserved pins and wires are exactly what the compute edges
+  need, so the order matters in the opposite direction;
+* the spatial rip-up keeps `l4w5o3c3` and the 20-node result intact (both
+  re-verified after the change).
+
 ## 4. What a LeNet-class workload needs
 
 | Requirement | Status |
