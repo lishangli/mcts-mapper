@@ -959,9 +959,15 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
         # the input DMA must cover the whole window: with Cycles0 > 64 the old
         # fixed 256 B loaded only half the samples and the kernel read stale
         # bank contents (this is what made CAP=128 produce wrong values)
-        ld = ''.join('\tload_data(din_addr[%d], 0x%x, %d, 0, 0, 0);\n'
-                     % (si, n * 4096, CAP_CYCLES * 4)
-                     for si, n, val in din_meta)
+        # The DMA moves at most 256 B per call (one burst), so a window longer
+        # than 64 words must be loaded in several bursts; a single 512 B request
+        # silently left the upper half of the bank stale, which is what made
+        # CAP=128 compute a missing operand.
+        ld = ''.join(
+            ''.join('\tload_data((void*)((char*)din_addr[%d] + %d), 0x%x, %d, 0, 0, 0);\n'
+                    % (si, off, n * 4096 + off, min(256, CAP_CYCLES * 4 - off))
+                    for off in range(0, CAP_CYCLES * 4, 256))
+            for si, n, val in din_meta)
         st = ''.join('\tstore(dout_addr[%d], 0x%x, %d, 0, 0);\n'
                      % (i, s * 4096, STORE_BYTES)
                      for i, (s, _) in enumerate(caps))

@@ -278,7 +278,25 @@ internals, and widening the AG window breaks value correctness in the current
 driver. That is the next concrete piece of work.
 
 
-#### Multi-stream limit of the window experiment
+#### Fix: the DMA moves at most 256 B per call
+
+`nn4x2` at `S2_CAP_CYCLES=128` settled at a constant **16** instead of 18; the
+cause was not the AG at all — a single `load_data` request silently covers only
+256 B (64 words), so the upper half of every input bank stayed stale and one
+operand read as 0. Splitting the load into 256 B bursts fixes it:
+
+| `S2_CAP_CYCLES` | load | exec | store | total | value |
+|---|---|---|---|---|---|
+| 64 | 98 | 27 | 731 | 867 | [18, 21] ✓ |
+| 128 | 226 | 6 | 1002 | 1302 | **[18, 21] ✓** |
+
+With the batch doubled, end-to-end throughput rises from
+`1024 ops / 867 cycles = 1.18 ops/cycle` to
+`2048 ops / 1302 cycles = 1.57 ops/cycle` — the launch cost amortising, measured
+on a verified-correct kernel. Marginal rate over the extra 64 samples is
+6.8 cycles/sample (4 input streams), i.e. ~2.4 ops/cycle sustained.
+
+#### Superseded: the earlier multi-stream limit note
 
 `nn4x2` (4 input streams, 2 captures) at the same two window lengths:
 
