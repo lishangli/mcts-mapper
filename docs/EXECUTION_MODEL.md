@@ -117,28 +117,40 @@ Measured by `tools/s2/perf.py`, which reads the `S2_PERF` line the generated
 
 | Case | compute nodes | exec | store | total | expected |
 |---|---|---|---|---|---|
-| branch | 3 | 22 | 153 | (pending) | 3 |
-| chain_dfg | 4 | 25 | 162 | (pending) | 6 |
-| dfg_chain5 | 4 | 5 | 6 | (pending) | 9 |
-| dfg_scale | 5 | 4 | 5 | (pending) | 11 |
-| dfg_big | 10 | 4 | 6 | (pending) | 31 |
+| dfg_scale | 5 | 4 | 5 | 11 | 11 |
+| dfg_big | 10 | 5 | 6 | 13 | 31 |
+| dfg_mixed | 4 | 5 | 6 | 13 | 13 |
+| dfg_chain5 | 4 | 26 | 4 | 32 | 9 |
+| dfg_const | 2 | 24 | 6 | 32 | 8 |
+| chain_dfg | 4 | 23 | 163 | 188 | 6 |
+| dfg_branch | 3 | 5 | 186 | 193 | 3 |
+| dfg_multi | 5 | 25 | 175 | 202 | [8, -2] |
 
-Two facts already follow from the split:
+(measured 2026-11-07 with `perf.py`; every case also passes its value check)
 
-* `execute()` returns before the array has drained: its cost (4–25 cycles) is the
-  command issue path, not the kernel.
-* the capture window dominates the wall clock, so **`total` (through `fence`)** is
-  the metric to model; the split is kept because it separates command latency from
-  memory latency.
+Three facts follow:
 
-The model being fitted is
+* `execute()` returns before the array has drained: its cost (4–26 cycles) is the
+  command issue path, not the kernel, and it does not grow with graph size
+  (`dfg_big`, 10 PEs, has the smallest `exec`).
+* wall clock is bimodal: ~11–13 cycles when the store finds nothing to move, and
+  ~190 cycles when the capture path actually drains 512 B per channel. The
+  difference is the DMA, not the array.
+* therefore the model has to separate three terms:
 
 ```
-total ≈ t_start + ctx_granularity * (max_ctx + fill) + capture_cycles + dma_cycles
+total = issue(exec) + array_drain + capture_dma(store)
+
+issue   ≈ 4 .. 26 cycles, independent of graph size (command path)
+capture ≈ 64 contexts × exe_ii(2) ≈ 128 cycles  (AG window, only visible when
+          the window is actually walked)
+dma     ≈ 512 B per capture channel
 ```
 
-with `ctx_granularity = exe_ii = 2`, `capture_cycles = 64`, and `dma_cycles`
-proportional to the store length (512 B per output channel per IOB).
+The 32-cycle cases (`dfg_chain5`, `dfg_const`) sit between the two modes; a
+predictive fit will need the AG start offset and the number of beats per store,
+which the current instrumentation does not record. That is the next measurement
+gap, not a modelling choice.
 
 ## 4. What this implies for neural-network workloads
 
