@@ -241,22 +241,29 @@ instrumentation of the IOB handshake; the RISC-V-side `rdcycle` around DMA calls
 cannot separate issue from completion.
 
 
-### 3.6 Window-slope validation failed (2026-11-07, final)
+### 3.6 The window>64 bug, and a valid slope at last (2026-11-07, final)
 
-Attempting to confirm the slope with correct input buffers (arrays sized by the
-window, fill loop extended):
+A window longer than 64 samples produced wrong values. Root cause found: the
+generated code loaded a **fixed 256 B** per input stream and stored a fixed
+512 B, regardless of `Cycles0`. With a 128-sample window the kernel therefore
+read 64 loaded samples plus 64 stale bank words. Both DMA lengths now scale
+with the window (`CAP_CYCLES * 4`).
 
-| `S2_CAP_CYCLES` | total | captured value | expected |
+With that fixed, `dfg_scale` at two window lengths:
+
+| `S2_CAP_CYCLES` | total | value | expected |
 |---|---|---|---|
-| 64 | 334 | 11 | 11 ✓ |
-| 128 | **377** | **5** | 11 ✗ |
+| 64 | 340 | 11 | 11 ✓ |
+| 128 | 393 | 11 | 11 ✓ |
 
-The 64→128 delta is 43 cycles, but the 128-sample run produces the **wrong
-value**, so its timing cannot be used to derive a throughput figure: the
-capture path is only correct for a 64-sample window in this driver (the IOB
-bank/AG configuration does not extend to 128 samples as emitted). The earlier
-0.52 cycles/sample number came from the same broken configuration and is
-**retracted**.
+Slope = **0.83 cycles/sample** (53 cycles for 64 extra samples). The array
+therefore consumes a new sample every 0.83 cycles in this configuration, and
+the earlier 0.52 figure is superseded by this cleaner measurement (both runs
+correct, same flow).
+
+Applied to a kernel with `n` operations per sample: `n / 0.83` ops/cycle while
+streaming — 6 ops/cycle for the 5-node `dfg_scale`, and ~19 ops/cycle for the
+16-operation `nn4x2` if the stream rate carries over (measured directly below).
 
 Verified end-to-end figures therefore remain the low ones:
 

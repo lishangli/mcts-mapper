@@ -481,7 +481,7 @@ def iob_cfg(fields):
 # Capture window and store size are parameters, not constants, so the timing
 # model can be fitted from controlled runs (docs/EXECUTION_MODEL.md §3).
 CAP_CYCLES = int(os.environ.get('S2_CAP_CYCLES', '64'))
-STORE_BYTES = int(os.environ.get('S2_STORE_BYTES', '512'))
+STORE_BYTES = int(os.environ.get('S2_STORE_BYTES', str(CAP_CYCLES * 4)))
 # Number of execute() rounds on the SAME configuration. K > 1 amortises the
 # launch cost (config + input DMA) and is the only way this flow can measure a
 # per-iteration throughput before real II scheduling exists.
@@ -956,7 +956,11 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
         iob_ens = 0
         for s, _ in caps: iob_ens |= (1 << s)
         for si, n, val in din_meta: iob_ens |= (1 << n)
-        ld = ''.join('\tload_data(din_addr[%d], 0x%x, 256, 0, 0, 0);\n' % (si, n * 4096)
+        # the input DMA must cover the whole window: with Cycles0 > 64 the old
+        # fixed 256 B loaded only half the samples and the kernel read stale
+        # bank contents (this is what made CAP=128 produce wrong values)
+        ld = ''.join('\tload_data(din_addr[%d], 0x%x, %d, 0, 0, 0);\n'
+                     % (si, n * 4096, CAP_CYCLES * 4)
                      for si, n, val in din_meta)
         st = ''.join('\tstore(dout_addr[%d], 0x%x, %d, 0, 0);\n'
                      % (i, s * 4096, STORE_BYTES)
