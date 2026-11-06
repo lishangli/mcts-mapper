@@ -277,6 +277,26 @@ VCD-level IOB handshake capture); the RISC-V-side `rdcycle` cannot see the array
 internals, and widening the AG window breaks value correctness in the current
 driver. That is the next concrete piece of work.
 
+
+#### Multi-stream limit of the window experiment
+
+`nn4x2` (4 input streams, 2 captures) at the same two window lengths:
+
+| `S2_CAP_CYCLES` | total | value | expected |
+|---|---|---|---|
+| 64 | 867 | [18, 21] | ✓ |
+| 128 | 1238 | **[16, 8]** | ✗ |
+
+So the 0.83 cycles/sample slope is verified **only for the single-stream case**
+(`dfg_scale`). With four streams the 128-sample window still corrupts values
+(the IOB bank window is 64 words per stream in this configuration), so a
+per-layer throughput number for `nn4x2` cannot be quoted from a slope; its
+verified end-to-end cost stays 867 cycles for 16 operations = 0.018 ops/cycle.
+
+That is the honest position: streaming throughput is demonstrated for one
+kernel, and the multi-stream case needs either a per-stream bank window > 64 or
+a second capture configuration before the same measurement can be repeated.
+
 ## 4. What this implies for neural-network workloads
 
 * The array executes **64 integer ops/cycle at peak**; a LeNet-class convolution
