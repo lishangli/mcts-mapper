@@ -77,6 +77,9 @@ IW = json.load(open(os.path.join(NET, 'netlist_wires.json')))
 # Measured on dfg_big: relaxed emitted on attempt 0 in 5/5 runs, pre-P0 in 5/8
 # (8 runs, 3 needed a remap); both modes pass the 8-case regression.
 STRICT_OCC = os.environ.get('S2_OCC_STRICT', '0') == '1'
+# S2_RIPUP=0 disables the intra-node rip-up retry (second operand order), which
+# is the A/B control for "does routing order matter for this DFG".
+RIPUP = os.environ.get('S2_RIPUP', '1') == '1'
 
 class Occ:
     """Routing occupancy, keyed by (gib, port).
@@ -494,22 +497,50 @@ for attempt in range(12):
             claimed = {}   # edge id -> mux outputs it currently owns in `occ`
             opnd_of = {}
             di = PEBLK_INV[placement[nid]]
-            for e in ins:
-                if is_stream(e.tail):
-                    continue  # IOB stream: constant present every cycle
-                opnd = e.operand if e.operand in (0, 1) else 0
-                opnd_of[e.id] = opnd
-                in_p, path = route_operand(PEBLK_INV[placement[e.tail]], di, opnd,
-                                           prefer=port_of.get(e.id), occ=occ,
-                                           used_ports=port_used.get(di, ()))
-                assert path, 'no route %d->%d op%d %s' % (
-                    e.tail, e.head, opnd, LAST_ROUTE_FAIL or '{}')
-                port_used.setdefault(di, set()).add(in_p)
-                hs[e.id] = path_delay(path); route_of[e.id] = path
-                port_of[e.id] = in_p
-                # claim immediately: sibling edges of this same node must not be
-                # allowed to reuse a mux this edge already drives
-                claimed[e.id] = occ.claim(path)
+            # Operands of one node compete for the same pins and the same last-hop
+            # wires, so the order they are routed in decides whether both fit. If
+            # the first order dead-ends, release this node's own claims and retry
+            # hardest-first (longest source-to-destination distance): the cheap half
+            # of a rip-up, since nothing outside this node is touched.
+            def dist_of(e):
+                a = PEBLK.get(PEBLK_INV[placement[e.tail]], placement[e.tail])
+                b = placement[nid]
+                return abs(a - b) if isinstance(a, int) and isinstance(b, int) else 0
+
+            def route_operands(seq_):
+                """route in the given order; returns the failing edge or None."""
+                for e in seq_:
+                    if is_stream(e.tail):
+                        continue  # IOB stream: constant present every cycle
+                    opnd = e.operand if e.operand in (0, 1) else 0
+                    opnd_of[e.id] = opnd
+                    in_p, path = route_operand(PEBLK_INV[placement[e.tail]], di, opnd,
+                                               prefer=port_of.get(e.id), occ=occ,
+                                               used_ports=port_used.get(di, ()))
+                    if not path:
+                        return e
+                    port_used.setdefault(di, set()).add(in_p)
+                    hs[e.id] = path_delay(path); route_of[e.id] = path
+                    port_of[e.id] = in_p
+                    # claim immediately: sibling edges of this same node must not
+                    # be allowed to reuse a mux this edge already drives
+                    claimed[e.id] = occ.claim(path)
+                return None
+
+            seq = [e for e in ins if not is_stream(e.tail)]
+            pins_before = set(port_used.get(di, ()))
+            fail = route_operands(seq)
+            if fail is not None and RIPUP and len(seq) > 1:
+                for e in seq:
+                    occ.release(claimed.pop(e.id, []))
+                    hs.pop(e.id, None); route_of.pop(e.id, None)
+                    port_of.pop(e.id, None)
+                if pins_before: port_used[di] = set(pins_before)
+                else: port_used.pop(di, None)
+                fail = route_operands(sorted(seq, key=dist_of, reverse=True))
+            if fail is not None:
+                assert False, 'no route %d->%d op%d %s' % (
+                    fail.tail, fail.head, fail.operand, LAST_ROUTE_FAIL or '{}')
             base_c0 = max([ctx_of[e.tail] + hs[e.id] for e in ins if e.id in hs] + [1])
             # snapshot of the unconstrained routing: every bump level restarts here
             base = {e.id: (port_of[e.id], route_of[e.id], hs[e.id])
