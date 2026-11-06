@@ -18,7 +18,7 @@ import time
 S2 = os.path.dirname(os.path.abspath(__file__))
 OUT = os.environ.get('S2_OUT_DIR') or S2      # where run_dfg.sh writes artefacts
 sys.path.insert(0, S2)
-from regression import CASES, steady            # noqa: E402  (same case list)
+from regression import CASES, steady, bridge_hint   # noqa: E402  (same list)
 
 PERF_RE = re.compile(
     r'S2_PERF load=(\d+) exec=(\d+) store=(\d+) total=(\d+) caps=(\d+)')
@@ -82,7 +82,10 @@ def main():
             p = subprocess.run([os.path.join(S2, 'run_dfg.sh'), dfg, tag],
                                capture_output=True, text=True, cwd=S2)
             perf = measure(tag) or {}
-            st = steady(os.path.join(OUT, tag + '_run.log'))
+            log = os.path.join(OUT, tag + '_run.log')
+            # a mapping failure aborts run_dfg.sh before the simulator runs, so
+            # there is no run log: report the bridge's reason instead of raising
+            st = steady(log) if os.path.exists(log) else {}
             got = [st.get(i, (None, 0))[0] for i in range(len(expect))]
             good = p.returncode == 0 and got == expect
             ok += good
@@ -92,6 +95,8 @@ def main():
                   % (dfg, perf.get('load'), perf.get('exec'),
                      perf.get('store'), perf.get('total'), perf.get('caps'),
                      got, expect, 'PASS' if good else 'FAIL'))
+            if not good and not os.path.exists(os.path.join(OUT, tag + '_run.log')):
+                print('%-28s   -> %s' % ('', bridge_hint(tag)))
     print('\n%d/%d PASS  (%.0fs)' % (ok, len(rows), time.time() - t0))
     json.dump({'rows': rows, 'elapsed_s': round(time.time() - t0, 1)},
               open(out, 'w'), indent=1)

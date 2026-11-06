@@ -329,6 +329,7 @@ def group_ports(inst, operand):
                   if x.startswith('io_in_'))
 
 LAST_ROUTE_FAIL = {}   # set when route_operand runs out of candidates
+OPND_ASSIGN = {}       # edge id -> operand mux actually wired (may be swapped)
 
 def route_operand(src_inst, dst_inst, operand, prefer=None, occ=(), used_ports=()):
     """route to a port in the operand's mux group (per-PE heterogeneous).
@@ -391,7 +392,7 @@ def iob_rows(n, is_store, mux):
 # ==== mapping + emission with retries ====
 placement = None
 EMIT_OK = False
-for attempt in range(12):
+for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
     mapping = Mapping(dfg, adg, ops, False)
     mapping.use_true_reward()
     # Retry diversity: a near-greedy policy (temp 1e-2) reproduces almost the
@@ -514,6 +515,7 @@ for attempt in range(12):
                         continue  # IOB stream: constant present every cycle
                     opnd = e.operand if e.operand in (0, 1) else 0
                     opnd_of[e.id] = opnd
+                    OPND_ASSIGN[e.id] = opnd
                     in_p, path = route_operand(PEBLK_INV[placement[e.tail]], di, opnd,
                                                prefer=port_of.get(e.id), occ=occ,
                                                used_ports=port_used.get(di, ()))
@@ -529,15 +531,31 @@ for attempt in range(12):
 
             seq = [e for e in ins if not is_stream(e.tail)]
             pins_before = set(port_used.get(di, ()))
-            fail = route_operands(seq)
-            if fail is not None and RIPUP and len(seq) > 1:
+
+            def rewind():
+                """undo this node's routing so another operand order can be tried"""
                 for e in seq:
                     occ.release(claimed.pop(e.id, []))
                     hs.pop(e.id, None); route_of.pop(e.id, None)
                     port_of.pop(e.id, None)
                 if pins_before: port_used[di] = set(pins_before)
                 else: port_used.pop(di, None)
+
+            fail = route_operands(seq)
+            if fail is not None and RIPUP and len(seq) > 1:
+                rewind()
                 fail = route_operands(sorted(seq, key=dist_of, reverse=True))
+            if (fail is not None and RIPUP and len(seq) == 2
+                    and op_of[nid] in ('ADD', 'MUL')):
+                # ADD/MUL are commutative: swapping the operands moves one edge
+                # from its operand mux group to the other, which is often the
+                # only free set of input pins. Semantics are unchanged.
+                rewind()
+                for e in seq:
+                    opnd_of[e.id] = 1 - (e.operand if e.operand in (0, 1) else 0)
+                    OPND_ASSIGN[e.id] = opnd_of[e.id]
+                print('swap operands %s (%s)' % (nid, op_of[nid]))
+                fail = route_operands(seq)
             if fail is not None:
                 assert False, 'no route %d->%d op%d %s' % (
                     fail.tail, fail.head, fail.operand, LAST_ROUTE_FAIL or '{}')
@@ -700,7 +718,8 @@ for attempt in range(12):
                 m0 = m1 = 0
                 for e in EDGES:
                     if e.head != nid: continue
-                    operand = e.operand if e.operand in (0, 1) else 0
+                    operand = OPND_ASSIGN.get(
+                        e.id, e.operand if e.operand in (0, 1) else 0)
                     in_p = port_of.get(e.id)
                     assert in_p is not None, 'no port for %s' % e.id
                     slot_v = op_mux_slot(PEBLK_INV[pe], operand, 'in', in_p)

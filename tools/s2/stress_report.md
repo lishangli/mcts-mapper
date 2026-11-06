@@ -66,7 +66,39 @@ python gen_dag.py --shape chain --layers 20 --width 1 --outputs 3 --consts 3 \
 # 任意随机规模
 python gen_dag.py --layers 4 --width 5 --outputs 3 --consts 3 --name l4w5o3
 python gen_dag.py --shape chain --layers 16 --width 1 --outputs 3 --name chain16o3c3
+
+# 单次 placement 的失败归因（不跑 RTL，几十秒到几分钟）
+S2_ATTEMPTS=1 S2_STATS=1 python mcts_bridge.py "$PWD/dfg_dag_l4w5o3c3.json"
 ```
+
+## 2026-11-07：20 节点失败定位（仪器化诊断）
+
+单个 placement、单次 emission（`S2_ATTEMPTS=1 S2_STATS=1`）给出的证据：
+
+```
+no route 12->13 op0 {'src': 0, 'dst': 33, 'operand': 0, 'group': [0, 1, 2, 3],
+                     'used': [], 'free_pins': [0, 1, 2, 3],
+                     'kind': 'congestion', 'free_hops': 3}
+occ cfg=60 rd=53 peak=113        # 113 / 1668 mux
+```
+
+* 目的 PE 的 **4 个 operand pin 全空**，且去掉占用后存在 3 跳路径 → 既不是引脚耗尽，
+  也不是拓扑不可达；是喂这 4 个 pin 的 GIB mux 全被前面的边占了。
+* 换用**交换律操作数交换**（ADD/MUL 的 op0/op1 互换端口组）后，失败点后移到
+  `2->16 op0`（PE 52，`free_hops=7`），occ peak 113 → 196 —— 说明这确实是
+  末跳拥塞，而不是全局容量（全阵列占用 7%~12%）。
+* 12 次 remap（采样温度 1e-2→1.0 递增）29 分钟仍未成功：换 placement 无法改变
+  "末跳 4 个 mux 是瓶颈"这个局部事实。
+
+**为什么现在的占用模型过保守**：`Occ` 把 `(gib, port)` 当作**永久**独占，但 GIB 有
+双配置体（cfgA/cfgB，由 `ctx_ptr(0)` 选择）。两条边如果值到达同一根线的 ctx 奇偶不同，
+物理上可以共享这根线。修复方向 = **时间展开占用（MRRG-lite）**：key 改为
+`(wire, slot)`，`slot = (该跳的 ctx) & 1`，并在 parity settle 之后按最终 `c0`
+重发所有 claim。这正是 RELATED_WORK 里 MRRG 的最小可用形态。
+
+本轮已落地但不足以破墙的三项：操作数交换、节点内 rip-up、重试温度递增
+（效果：失败点更深、occ peak 113→196，仍失败）。
+
 
 `stress.py` 单配置约 2~9 分钟（取决于 remap 次数），全部串行执行：`run_dfg.sh` 会就地重写
 `main_s2.c` / `cgra_execute.c`，并行会互相覆盖。
