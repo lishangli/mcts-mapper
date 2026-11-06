@@ -88,7 +88,13 @@ SLOT_OCC = os.environ.get('S2_SLOT_OCC', '0') == '1'
 # Routes are emitted into BOTH config banks and a single-op PE is duplicated
 # into both slots, so the value should be present every cycle; this switch
 # tests that claim against RTL instead of assuming it.
-NO_PHASE = os.environ.get('S2_NO_PHASE', '0') == '1'
+# Default ON for the normal flow: the emitted route lives in both banks, so the
+# mod-4 check only adds failures. Time-folded operators (S2_PACK) keep it,
+# because there each PE hosts two different ops and the output is only valid in
+# the context its slot is active.
+NO_PHASE = os.environ.get(
+    'S2_NO_PHASE',
+    '0' if os.environ.get('S2_PACK', '0') == '1' else '1') == '1'
 
 class Occ:
     """Routing occupancy, keyed by (gib, port).

@@ -44,6 +44,11 @@ CASES = [
     # 12 compute nodes including 6 MULs, so it also sits at the current
     # capacity edge (the largest DFG that maps without a remap).
     ('nn3x2.json', [10, 14]),
+    # Larger dense layer: 4 activations, 2 neurons -> 16 compute nodes.
+    ('nn4x2.json', [18, 21]),
+    # Capacity case: 20 compute nodes in a 4x5 layered DAG, three outputs.
+    # Maps only with the mod-4 delivery constraint off (the default now).
+    ('dfg_dag_l4w5o3c3.json', [6, 6, 4]),
 ]
 
 def steady(run_log):

@@ -1,0 +1,38 @@
+{
+ "name": "nn4x2",
+ "params": {
+  "inputs": 4,
+  "outputs": 2,
+  "seed": 0
+ },
+ "weights": [
+  [
+   2,
+   2,
+   1,
+   2
+  ],
+  [
+   3,
+   2,
+   2,
+   2
+  ]
+ ],
+ "bias": [
+  1,
+  0
+ ],
+ "input_values": [
+  1,
+  2,
+  3,
+  4
+ ],
+ "compute_nodes": 16,
+ "expect": [
+  18,
+  21
+ ],
+ "dfg": "nn4x2.json"
+}

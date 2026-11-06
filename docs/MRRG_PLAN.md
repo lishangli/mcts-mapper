@@ -98,6 +98,14 @@ be explored for *distinct* wires), or to insert explicit 1-cycle delay hops on
 demand.
 
 
+### 2026-11-07 (final): the 20-node case maps
+
+With `S2_NO_PHASE` now the default (S2_PACK excepted), `dfg_dag_l4w5o3c3`
+maps **on the first attempt** and captures **`[6, 6, 4]`** (`load=59 exec=22
+store=14 total=128`, 3 channels). The MRRG-lite work (slot-aware occupancy) is
+still in the tree behind `S2_SLOT_OCC=1` and stays useful for folded designs,
+but it was not what unblocked this case — the over-constrained scheduler was.
+
 ### 2026-11-07 (later): the constraint was doing more harm than good
 
 `S2_NO_PHASE=1` drops the mod-4 check. Evidence collected:

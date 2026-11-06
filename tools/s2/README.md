@@ -52,13 +52,15 @@ python gen_dag.py --shape chain --layers 12 --outputs 2 --consts 3 --name chain1
 
 ## Status (2026-11-07)
 
-* Regression `python regression.py` → **10/10 PASS**, including `dfg_big` (10 compute PEs,
-  6 IOB streams), a 12-stage chain with two capture channels, and `nn3x2`, a
-  `y = Wx + b` layer (3 activations, 2 neurons, 6 multipliers) that runs bit-exactly.
-* Capacity wall: **12-node graphs map; 20-node DFGs (chain or 4×5 layered) exhaust the
-  12-attempt remap budget**, failing on `no parity route` and `no route`. GIB mux occupancy
-  (peak ≈ 316 / 1668) and IOB banks (3 / 32) are *not* the limit — see `stress_report.md`
-  and `docs/RELATED_WORK.md` for what the mature toolchains do differently (MRRG + II).
+* Regression `python regression.py` → **12/12 PASS**, including `dfg_big` (10 compute PEs,
+  6 IOB streams), a 12-stage chain with two capture channels, two dense layers
+  (`nn3x2`, `nn4x2`) and a **20-node layered DAG**.
+* Capacity: the previous 12-node wall was an artefact of the mod-4 delivery
+  constraint. Routes are emitted into both config banks and single-operator PEs
+  are duplicated across slots, so the constraint is unnecessary in the normal
+  flow; with `S2_NO_PHASE=1` (now the default, `S2_PACK` excepted) the 20-node
+  `l4w5o3c3` maps on the first attempt and captures `[6, 6, 4]`. The phase model
+  still applies to time-folded PEs and RF reads.
 * Every run prints `S2_PERF exec=… store=… total=…`; `perf.py` tabulates them and the
   compute/execution/performance model lives in `docs/EXECUTION_MODEL.md`.
 * `gen_nn.py` turns a dense layer into a DFG; `--inputs/--outputs` size it, and the
