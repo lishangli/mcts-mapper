@@ -916,12 +916,51 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
             e0 = next(e for e in EDGES if e.tail == cnid and e.head == consumer)
             opnd = operand if operand in (0, 1) else 0
             dst_inst = PEBLK_INV[placement[consumer]]
+            # A stream routed after every compute edge often finds no free path
+            # ('no const IOB'). Apply the same rip-up as for compute edges:
+            # release recent edges, route the stream, then re-route each victim
+            # with its exact delay so no context assignment changes.
+            def _try_stream():
+                for cand in group_ports(dst_inst, opnd):
+                    if cand in port_used.get(dst_inst, ()): continue
+                    if IW['pe_in'][str(dst_inst)].get(str(cand)) is None: continue
+                    g = iob_stream_route(dst_inst, cand, used_iob, occ)
+                    if g:
+                        return cand, g
+                return None, None
+
             got = None
-            for cand in group_ports(dst_inst, opnd):
-                if cand in port_used.get(dst_inst, ()): continue
-                if IW['pe_in'][str(dst_inst)].get(str(cand)) is None: continue
-                got = iob_stream_route(dst_inst, cand, used_iob, occ)
-                if got: in_p = cand; break
+            cand_sets = [[]] + [ROUTED[-k:] for k in (1, 2, 3, 4, 6, 8)
+                                if len(ROUTED) >= k]
+            for victims in cand_sets:
+                snap = (copy.deepcopy(occ.cfg), copy.deepcopy(occ.rd)) if victims else None
+                marks = [v['claimed'] for v in victims]
+                for v in victims:
+                    occ.release(v['claimed']); v['claimed'] = []
+                in_p, got = _try_stream()
+                if got:
+                    ok = True
+                    for v in victims:
+                        p = route_parity(v['src'], v['dst'], v['port'],
+                                         v['hs'] % 4, occ=occ, c0=v['c0'])
+                        if p is None or path_delay(p) != v['hs']:
+                            ok = False
+                            break
+                        occ.release(v['claimed'])
+                        v['claimed'] = occ.claim(
+                            p, path_slots(p, v['c0']) if SLOT_OCC else None)
+                        route_of[v['eid']] = p
+                    if ok:
+                        if victims:
+                            print('stream rip-up: released %d edge(s)' % len(victims))
+                        break
+                if snap:
+                    occ.cfg, occ.rd = snap
+                for v, m in zip(victims, marks):
+                    if v['claimed'] != m:
+                        occ.release(v['claimed'])
+                    v['claimed'] = m
+                got = None
             assert got is not None, 'no const IOB'
             port_used.setdefault(dst_inst, set()).add(in_p)
             port_of[e0.id] = in_p
