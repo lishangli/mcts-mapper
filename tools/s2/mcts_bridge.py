@@ -317,11 +317,24 @@ def route_parity(src_inst, dst_inst, port, want, occ=(), c0=None):
     assert tgt is not None, 'no pe_in %d' % dst_inst
     terms = set(tuple(p) for p in IW['pe_out'][str(src_inst)])
     start = tuple(tgt)
-    q = deque([(start, 0, [])]); seen = {start}
+    # State = (wire, delay mod 4). Visiting a wire once per *parity* is what gives
+    # the router its delay freedom: with a single visit per wire, a pair whose
+    # only free paths all share one residue has no route at all, which is what
+    # stopped the 20-node DFGs. Two visits cost nothing on the wire, because a
+    # simple path configures it once; the returned path is checked to be simple,
+    # so a walk can never ask for two mux configs on the same wire (the old
+    # self-contradicting cin bug).
+    q = deque([(start, 0, [])]); seen = {(start, 0)}
+    MAX_HOPS = 24
     while q:
         (g, p), par, pa = q.popleft()
         if (g, p) in terms and pa and par % 4 == want:
-            return pa
+            keys = [(ent[0], ent[1]) for ent in pa]
+            if len(keys) == len(set(keys)):
+                return pa
+            continue
+        if len(pa) >= MAX_HOPS:
+            continue
         if pa and occ.strict and (g, p) in occ: continue
         npar = (par + (1 if is_reg(g, p) else 0)) % 4
         slot = None if c0 is None else (c0 - par) & 1
@@ -331,8 +344,9 @@ def route_parity(src_inst, dst_inst, port, want, occ=(), c0=None):
             elif pa and not occ.read_ok((g, p), slot):
                 continue
             node = src if kind == 'track' else (gib, src)
-            if node in seen: continue
-            seen.add(node)
+            st = (node, npar)
+            if st in seen: continue
+            seen.add(st)
             q.append((node, npar, pa + [(gib, dstport, idx)]))
     return None
 
