@@ -84,6 +84,11 @@ RIPUP = os.environ.get('S2_RIPUP', '1') == '1'
 # a GIB mux is claimed per config bank, so two paths can share a wire when
 # their values arrive in different contexts. Default off until RTL-validated.
 SLOT_OCC = os.environ.get('S2_SLOT_OCC', '0') == '1'
+# S2_NO_PHASE=1 drops the mod-4 delivery constraint (any path delay accepted).
+# Routes are emitted into BOTH config banks and a single-op PE is duplicated
+# into both slots, so the value should be present every cycle; this switch
+# tests that claim against RTL instead of assuming it.
+NO_PHASE = os.environ.get('S2_NO_PHASE', '0') == '1'
 
 class Occ:
     """Routing occupancy, keyed by (gib, port).
@@ -725,7 +730,7 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                     for e in ins:
                         if e.id not in hs: continue
                         want = (c0 - ctx_of[e.tail]) % 4
-                        if hs[e.id] % 4 != want:
+                        if hs[e.id] % 4 != want and not NO_PHASE:
                             # release own claim so the search may reuse its own wiring
                             occ.release(claimed[e.id]); claimed[e.id] = []
                             p2 = route_parity(PEBLK_INV[placement[e.tail]], di,

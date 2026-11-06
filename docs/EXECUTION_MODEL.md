@@ -99,6 +99,24 @@ Phase constraint enforced by the emitter:
 ctx_consumer ≡ ctx_producer + path_delay (mod 4)
 ```
 
+**This constraint is conservative, and the code now proves it.** The emitter
+writes every route into *both* config banks (`mcts_bridge.py`: `for slot in
+(0, 1): emit_route(...)`) and duplicates a single-operator PE's config into both
+slots, so a path is active in every context. The only physical requirement is
+that the producer's output is stable when the consumer samples — which holds for
+the default flow.
+
+Measured with `S2_NO_PHASE=1` (constraint dropped, same emitter):
+
+| case | expected | `S2_NO_PHASE=1` |
+|---|---|---|
+| `dfg_chain5` (5 nodes) | 9 | **PASS 9** |
+| `dfg_big` (10 PEs) | 31 | **PASS 31** |
+
+Where the constraint still matters: time-folded operators sharing one PE
+(`S2_PACK`) and RF reads with `k = 1`, because then the producer's output only
+exists in the context its slot is active.
+
 `tools/s2/mcts_bridge.py` searches for a path whose delay satisfies this
 (`route_parity`); when no such path exists it retries with the producer launched
 later (`S2_PHASE_BUMP`), which changes `want` without moving the operator.
