@@ -12,4 +12,5 @@ tools/s2/*.vcd
 tools/s2/main_s2.c
 tools/s2/cgra_execute.c
 tools/s2/bridge_meta.json
+tools/s2/perf_latest.json
 tools/s2/__pycache__/
