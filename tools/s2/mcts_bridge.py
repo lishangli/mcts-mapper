@@ -17,7 +17,7 @@ Env switches:
                    i.e. hold the slot first, then flip it; 1 = level 0 only,
                    which reproduces the pre-bump hard-fail behaviour).
 """
-import sys, os, json
+import sys, os, json, random
 D = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(D, '..', '..'))
 SRC = os.environ.get('S2_MAPPER_SRC') or os.path.join(REPO, 'src')
@@ -512,6 +512,45 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
     cfg = mapping.state.build_config_dict()
     placement = {int(nid) - 1: attr['adgNode']
                  for nid, attr in cfg['dfg_node_attrs'].items()}
+
+    # Locality pass: the mapper optimises latency, not wirelength, and long
+    # routes are what congest the interconnect (a 24-node DAG dead-ends on a
+    # 9-hop edge whose destination pins are all free). Anneal the placement for
+    # total Manhattan edge length with the PE set fixed.
+    def _locality(pl, iters=int(os.environ.get('S2_LOCALITY_ITERS', '12000'))):
+        pos = {}
+        for x in json.load(open(ADG_JSON))['instances']:
+            pos[x['id']] = (x.get('x'), x.get('y'))
+        # only compute nodes that the mapper put on a PE may swap: moving an
+        # INPUT/CONST off its IOB would change it from a stream to a PE node
+        pe_nodes = [n for n in pl
+                    if pl[n] in PEBLK_INV and op_of.get(n) not in ('INPUT', 'CONST')]
+        if len(pe_nodes) < 3:
+            return pl
+        adj = [(e.tail, e.head) for e in EDGES
+               if e.tail in pl and e.head in pl
+               and pl[e.tail] in pos and pl[e.head] in pos]
+
+        def cost(p):
+            return sum(abs(pos[p[a]][0] - pos[p[b]][0]) +
+                       abs(pos[p[a]][1] - pos[p[b]][1]) for a, b in adj)
+        cur = cost(pl)
+        rnd = random.Random(len(pe_nodes) * 7919)
+        for i in range(iters):
+            a, b = rnd.sample(pe_nodes, 2)
+            pl[a], pl[b] = pl[b], pl[a]
+            new = cost(pl)
+            if new <= cur:
+                cur = new
+            else:
+                pl[a], pl[b] = pl[b], pl[a]
+        return pl
+
+    # off by default: it reduces total wirelength but does not yet fix the
+    # 24-node last-hop congestion, and the mapper's own placement passes the
+    # 20-node case, so this stays an experiment until it is measured better
+    if os.environ.get('S2_LOCALITY', '0') == '1':
+        placement = _locality(dict(placement))
     def on_iob(adg_id):
         return adg_id is not None and (adg_id < 16 or adg_id >= 307)
 
