@@ -50,12 +50,16 @@ python gen_dag.py --shape chain --layers 12 --outputs 2 --consts 3 --name chain1
 | `S2_PHASE_BUMP` | `4` | how many `c0` bump levels a node may try when parity fails |
 | `S2_STATS` | `0` | per-attempt occupancy / failure counters |
 
-## Status (2026-10-29)
+## Status (2026-11-07)
 
-* Regression `python regression.py` → **9/9 PASS**, including `dfg_big` (10 compute PEs,
-  6 IOB streams) and a 12-stage chain with two capture channels.
-* Capacity wall: **12-node chains map; 20-node DFGs (chain or 4×5 layered) exhaust the
+* Regression `python regression.py` → **10/10 PASS**, including `dfg_big` (10 compute PEs,
+  6 IOB streams), a 12-stage chain with two capture channels, and `nn3x2`, a
+  `y = Wx + b` layer (3 activations, 2 neurons, 6 multipliers) that runs bit-exactly.
+* Capacity wall: **12-node graphs map; 20-node DFGs (chain or 4×5 layered) exhaust the
   12-attempt remap budget**, failing on `no parity route` and `no route`. GIB mux occupancy
-  (peak ≈ 316 / 1668) and IOB banks (3 / 32) are *not* the limit — see `stress_report.md`.
-* Every run now prints `S2_PERF exec=<cycles> store=<cycles>`; those are the ground truth
-  for the timing model in `docs/EXECUTION_MODEL.md`.
+  (peak ≈ 316 / 1668) and IOB banks (3 / 32) are *not* the limit — see `stress_report.md`
+  and `docs/RELATED_WORK.md` for what the mature toolchains do differently (MRRG + II).
+* Every run prints `S2_PERF exec=… store=… total=…`; `perf.py` tabulates them and the
+  compute/execution/performance model lives in `docs/EXECUTION_MODEL.md`.
+* `gen_nn.py` turns a dense layer into a DFG; `--inputs/--outputs` size it, and the
+  independent evaluator writes the values the RTL must reproduce.

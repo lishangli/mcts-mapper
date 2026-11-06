@@ -39,6 +39,11 @@ CASES = [
     # from gen_dag.evaluate(), which is written independently of mcts_bridge
     # (see dfg_dag_chain12o2c3_expect.json). Two capture channels on one run.
     ('dfg_dag_chain12o2c3.json', [4, 6]),
+    # Neural-network layer from gen_nn.py: 3 activations, 2 neurons,
+    # y = W x + b with W=[[2,2,1],[2,3,2]], b=[1,0], x=[1,2,3] -> [10, 14].
+    # 12 compute nodes including 6 MULs, so it also sits at the current
+    # capacity edge (the largest DFG that maps without a remap).
+    ('nn3x2.json', [10, 14]),
 ]
 
 def steady(run_log):

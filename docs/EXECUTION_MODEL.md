@@ -125,6 +125,7 @@ Measured by `tools/s2/perf.py`, which reads the `S2_PERF` line the generated
 | chain_dfg | 4 | 23 | 163 | 188 | 6 |
 | dfg_branch | 3 | 5 | 186 | 193 | 3 |
 | dfg_multi | 5 | 25 | 175 | 202 | [8, -2] |
+| nn3x2 (3 inputs, 2 neurons, 6 MUL) | 12 | 5 | 10 | 34 | [10, 14] |
 
 (measured 2026-11-07 with `perf.py`; every case also passes its value check)
 
