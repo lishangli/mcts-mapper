@@ -57,16 +57,22 @@ Two things are needed for a throughput claim:
 Two `nn4x2` runs differing only in the AG window (after fixing the DMA burst
 bug — a single `load_data` covers only 256 B):
 
-| `S2_CAP_CYCLES` | samples | ops | load | store | total | value |
-|---|---|---|---|---|---|---|
-| 64 | 64 | 1024 | 98 | 731 | 867 | [18, 21] ✓ |
-| 128 | 128 | 2048 | 226 | 1002 | 1302 | [18, 21] ✓ |
+| `S2_CAP_CYCLES` | samples | ops | load | store | total | value | ops/cycle |
+|---|---|---|---|---|---|---|---|
+| 64 | 64 | 1024 | 98 | 731 | 867 | [18, 21] ✓ | 1.18 |
+| 128 | 128 | 2048 | 226 | 1002 | 1302 | [18, 21] ✓ | 1.57 |
+| 256 | 256 | 4096 | 1407 | 623 | 2066 | [18, 21] ✓ | **1.98** |
 
 ```
-end-to-end 64-sample  : 1024 / 867  = 1.18 ops/cycle
-end-to-end 128-sample : 2048 / 1302 = 1.57 ops/cycle
-marginal over the extra 64 samples: 6.8 cycles/sample ≈ 2.4 ops/cycle
+batch 64 -> 128 : +0.39 ops/cycle   (marginal 6.8 cycles/sample)
+batch 128 -> 256: +0.41 ops/cycle   (marginal 5.97 cycles/sample ≈ 2.7 ops/cycle)
 ```
+
+The trend is the point: **throughput keeps rising with batch size because the
+launch cost amortises**, and the marginal rate (6 cycles/sample) is dominated by
+moving four operands and storing two results, not by the array. At 256 samples
+the kernel sustains **1.98 ops/cycle end-to-end**, 3.1 % of the 64 ops/cycle
+ceiling — still launch/DMA-bound, and II>1 scheduling is what would lift it.
 
 Two things this establishes with verified-correct runs:
 
