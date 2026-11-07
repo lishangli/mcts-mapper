@@ -791,7 +791,8 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                 # destination is spatially near this one — the block is almost
                 # always in the destination's last-hop neighbourhood, which the
                 # "recent k" heuristic only hits by luck.
-                sets = [ROUTED[-k:] for k in (1, 2, 3, 4, 6, 8) if len(ROUTED) >= k]
+                sets = [ROUTED[-k:] for k in (1, 2, 3, 4, 6, 8, 12, 16, 20)
+                        if len(ROUTED) >= k]
                 dx, dy = pe_xy(di)
                 near = [v for v in ROUTED
                         if v['dst'] != di and
