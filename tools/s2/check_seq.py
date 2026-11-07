@@ -1,18 +1,23 @@
-"""Compare a captured sequence against the DFG's per-sample reference.
+"""Align a ramp capture against the DFG reference and report the residual.
 
-Constant-input kernels cannot catch a timing change: if every sample carries the
-same value, shifting when a value arrives changes nothing. This checker is for
-runs made with `S2_INPUT_RAMP=1`, where stream i carries `v_i + j` at sample j,
-so the expected output sequence is unique and a misaligned mapping shows up.
+Constant streams cannot detect a timing error: if every sample carries the same
+value, shifting *when* a value arrives changes nothing. With `S2_INPUT_RAMP=1`
+stream i carries `base_i + j` at sample j, so the expected output sequence is
+unique and any per-operand skew shows up as a **constant residual**:
 
-usage: python check_seq.py <dfg.json> <run.log>
+    capture[i] = ref(i - L) + r
+
+`L` is the pipeline latency (harmless: where the window starts) and `r` is the part
+a pure shift cannot explain. `r != 0` means the operands of some node arrive from
+different sample indices, i.e. the mapping is wrong for real data even though it
+computes correctly on constant inputs.
+
+usage: python check_seq.py <dfg.json> <run.log> [--min-run=N]
 """
 import json
 import re
 import sys
 
-INPUT_VALUES = {'%const1': 3, '%const2': 5, 'CONST1': 3, 'CONST2': 5}
-INPUT_VALUES.update({'%%x%d' % i: i + 1 for i in range(8)})   # matches the bridge
 OPS = {
     'ADD': lambda a, b: a + b,
     'SUB': lambda a, b: a - b,
@@ -21,18 +26,47 @@ OPS = {
 }
 
 
-def reference(dfg_path, samples):
+def load_bases(dfg_path, log_path):
+    """per-input ramp bases, from the generated driver (authoritative).
+
+    The driver sits next to the run log as main_s2.c (perf.py) or <name>_main.c.
+    Reading it matters: guessing bases 1,2,3 silently shifts the reference and
+    turns a real +2 skew into a plausible-looking latency.
+    """
+    import os
+    d = os.path.dirname(os.path.abspath(log_path))
+    cands = [os.path.join(d, 'main_s2.c'),
+             log_path.replace('_run.log', '_main.c')]
+    txt = ''
+    for c in cands:
+        if os.path.exists(c):
+            txt = open(c).read()
+            break
+    bases = {}
+    for i, v in re.findall(r'c(\d+)\[i\] = (\d+) \+ i', txt):
+        bases[int(i)] = int(v)
+    if bases:
+        return bases
+    dfg = json.load(open(dfg_path))
+    return {o['_gvid']: 1 for o in dfg['objects']
+            if o['opcode'].upper() == 'INPUT'}
+
+
+def reference(dfg_path, bases, samples):
     dfg = json.load(open(dfg_path))
     objs = {o['_gvid']: o for o in dfg['objects']}
     ins = {o['_gvid']: [] for o in dfg['objects']}
     for e in dfg['edges']:
         ins[e['head']].append((e['tail'], e['operand']))
+    insorted = sorted(o['_gvid'] for o in dfg['objects']
+                      if o['opcode'].upper() == 'INPUT')
+    base_of = {n: bases.get(k, 1) for k, n in enumerate(insorted)}
 
     def value(nid, j):
         o = objs[nid]
         op = o['opcode'].upper()
         if op == 'INPUT':
-            return INPUT_VALUES.get(o.get('ref_name'), 0) + j
+            return base_of.get(nid, 1) + j
         if op == 'CONST':
             return int(o['value'], 0)
         args = sorted(ins[nid], key=lambda t: t[1])
@@ -41,7 +75,7 @@ def reference(dfg_path, samples):
         return OPS[op](a, b) & 0xFFFFFFFF
 
     outs = [o['_gvid'] for o in dfg['objects'] if o['opcode'].upper() == 'OUTPUT']
-    return outs, [[value(ins[o][0][0], j) for j in range(samples)] for o in outs]
+    return [[value(ins[o][0][0], j) for j in range(samples)] for o in outs]
 
 
 def captured(path):
@@ -49,47 +83,63 @@ def captured(path):
     arr = {}
     for k, i, v in re.findall(r'O(\d+)\[(\d+)\] = (-?\d+)', t):
         arr.setdefault(int(k), {})[int(i)] = int(v)
-    return [ [arr[k][i] for i in sorted(arr[k])] for k in sorted(arr) ]
+    return [[arr[k][i] for i in sorted(arr[k])] for k in sorted(arr)]
 
 
-def best_offset(exp, got):
-    """smallest mismatch count over a shift of the reference against the capture.
+def align(ref, got):
+    """(longest constant-residual run, latency, residual, start).
 
-    The capture starts when the AG window starts, which is not sample 0 of the
-    reference, so the offset is searched on both sides.
+    On a linear ramp every latency gives a constant residual, so the run length
+    cannot choose between them; the smallest |residual| is the best pure-shift
+    explanation, and a non-zero one is what a per-operand skew looks like.
     """
-    best = (10 ** 9, None)
-    for d in range(0, min(len(exp) - 8, 512)):
-        n = min(len(exp) - d, len(got))
-        m = sum(1 for j in range(n) if got[j] != exp[d + j])
-        if m < best[0]:
-            best = (m, d)
-    return best
+    scored = []
+    for L in range(0, max(1, min(len(ref), len(got))) + 1):
+        run, r0, start = 0, None, None
+        bestrun = (0, None, None)
+        for i in range(L, min(len(got), L + len(ref))):
+            r = got[i] - ref[i - L]
+            if r0 is None or r == r0:
+                if r0 is None:
+                    r0, start = r, i
+                run += 1
+                if run > bestrun[0]:
+                    bestrun = (run, r0, start)
+            else:
+                r0, start, run = r, i, 1
+        scored.append((bestrun[0], L, bestrun[1], bestrun[2]))
+    if not scored:
+        return (0, None, None, None)
+    top = max(s[0] for s in scored)
+    cands = [s for s in scored if s[0] == top]
+    cands.sort(key=lambda s: abs(s[2]))
+    return cands[0]
 
 
 def main():
-    dfg, log = sys.argv[1], sys.argv[2]
+    argv = sys.argv[1:]
+    min_run = 24
+    for a in argv:
+        if a.startswith('--min-run='):
+            min_run = int(a.split('=')[1])
+    args = [a for a in argv if not a.startswith('--')]
+    if len(args) < 2:
+        print(__doc__)
+        return 2
+    dfg, log = args[0], args[1]
     caps = captured(log)
-    refs = None
-    any_bad = False
+    bases = load_bases(dfg, log)
+    refs = reference(dfg, bases, 512)
+    bad = 0
     for k, got in enumerate(caps):
-        nz = [i for i, v in enumerate(got) if v != 0]
-        if not nz:
-            print('channel %d: all zero' % k)
+        if k >= len(refs):
             continue
-        first = nz[0]
-        if refs is None:
-            refs = reference(dfg, max(1, len(got) - first))
-        exp = refs[k] if k < len(refs) else None
-        if exp is None:
-            continue
-        tail = got[first:]
-        bad, off = best_offset(exp, tail)
-        ok = bad == 0 and len(exp) > 8
-        any_bad |= not ok
-        print('channel %d: %d samples, best offset %s, %d mismatches -> %s'
-              % (k, len(tail), off, bad, 'OK' if ok else 'MISMATCH'))
-    return 1 if any_bad else 0
+        run, L, r, start = align(refs[k], got)
+        ok = run >= min_run and r == 0
+        bad += 0 if ok else 1
+        print('channel %d: run=%d latency=%d residual=%d (from idx %s) -> %s'
+              % (k, run, L, r, start, 'OK' if ok else 'SKEW'))
+    return 1 if bad else 0
 
 
 if __name__ == '__main__':

@@ -8,6 +8,7 @@ as evidence in neither direction.
 |---|---|---|---|---|---|---|
 | 0 | the dense path is DMA-bound, so batching cannot lift it past ~5 ops/cycle | none (baseline sweep) | `l4w5o3c3` at 128/256/512 samples, 1-3 readback channels | 3.67 -> 3.71 -> 4.60 ops/cycle (2560/698, 5120/1378, 10240/2226) | queue E3 to fit the slope and predict the ceiling | 29e57bf |
 | 0 | a constant-stream stimulus hides timing errors | `S2_INPUT_RAMP` + `check_seq.py` | `nn3x2` with ramp inputs | outputs became data-dependent (`[252,369]` vs `[10,14]`) but the checker cannot align the capture (warm-up zeros, no reference model) | E1 becomes blocking | e18bb22 |
+| 1 | with a per-sample ramp, a correct mapping shows `capture[i] = ref(i-L)` exactly, so any deviation is a constant residual | rewrote `check_seq.py`: bases read from the generated driver, latency chosen by smallest |residual| | `nn3x2` @64 samples, `S2_INPUT_RAMP=1` | ch0: 49 samples at L=15 with **r=+2**; ch1: 50 samples at L=12 with **r=-2** — a constant residual, i.e. the operands of a node do not all carry the same sample index | E1 partial: the detector works and the default flow **fails** it; A/B with `S2_NO_PHASE=0` launched to attribute the cause | (this commit) |
 
 ## Retracted
 
