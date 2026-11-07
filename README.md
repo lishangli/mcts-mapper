@@ -1,6 +1,21 @@
 # 📦 MCTS-MAP
 A CGRA Mapping Algorithm Project Based on MCTS-RL
 
+## 📈 Results on the RTL simulator (2026-11)
+
+| kernel | verification | cost | throughput |
+|---|---|---|---|
+| conv2d_3x3 (real convolution, AG streamed) | **42/42 outputs bit-exact** | 178 cycles, 3 runs identical | **19.8 ops/cycle (31 % of the 64 ops/cycle array peak)** |
+| 20-node dense DAG (`tools/s2`) | `[6, 6, 4]` bit-exact | 861 cycles @ 128 samples | 2.97 ops/cycle |
+| dense layers `nn3x2` / `nn4x2` | bit-exact | 34 / 867 cycles | 1.18–1.98 ops/cycle |
+
+The two orders of magnitude between the rows are not a hardware property: the
+convolution reuses every input across nine taps, so one configuration does 1764
+MACs, while the generated dense layers do one multiply per activation and are
+memory-bound by construction. Models, experiments and negative results are in
+`docs/EXECUTION_MODEL.md`, `docs/NN_WORKLOADS.md`, `docs/MRRG_PLAN.md` and
+`docs/RELATED_WORK.md`.
+
 ## 🚀 Features
 ✨ Feature 1: Supports front-end compiler CGRA-Compiler
 
@@ -57,7 +72,7 @@ pip install -r requirements.txt
 │   ├── mapper		# CGRA mapper
 │   ├── models		# Network models
 │   ├── parser		# JSON Parser
-│   ├── trainner#	# train class
+│   ├── trainer	# train class
 │   └── utils
 └── videos
 ```
