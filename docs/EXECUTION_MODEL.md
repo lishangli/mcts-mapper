@@ -128,6 +128,31 @@ The capture IOB runs an address generator for `Cycles0 = 64` cycles with
 regression judges the trailing run of identical non-zero samples. Samples before
 the pipeline is filled are transients, not results.
 
+
+### 2.4 The alignment rule (why NO_PHASE still works)
+
+`S2_NO_PHASE` drops the context constraint, and the RTL confirms the values stay
+correct — but only because the emitter keeps a weaker invariant that is easy to
+miss:
+
+```
+for every node:  h(op0) ≡ h(op1) (mod 4)     and  c0(node) = ctx(producer) + h
+```
+
+Both operands must reach the node in the **same cycle**, so their route delays
+must agree modulo the 4-context rotation. Dropping the context check is safe as
+long as the delays are left alone; it is *not* safe to let a route change its
+delay, even by a multiple of 4, without re-deriving `c0` — the node would then
+sample a different iteration.
+
+Measured: allowing a rip-up victim to take any delay made the 24-node DFG map
+for the first time, and the RTL captured `[0,1,2]` instead of `[8,4,7,5,4,7]`.
+That failure is what pinned the rule down.
+
+Consequence for any future re-scheduling work: changing a delay requires
+recomputing `c0` for the node **and re-checking every consumer**, which is
+exactly the bookkeeping a time-expanded (PE, ctx) resource graph would do.
+
 ## 3. Performance model
 
 Measured by `tools/s2/perf.py`, which reads the `S2_PERF` line the generated
