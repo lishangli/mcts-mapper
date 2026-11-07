@@ -16,6 +16,7 @@ later session) does not have to reconstruct it from the experiment logs.
 | The capture store is a fixed ~700-cycle cost | 512 B and 64 B stores both cost ~715 cycles |
 | The input DMA moves at most 256 B per call | 128-sample windows read stale data until the load was split into bursts |
 | Mapping capacity moved 12 → 20 nodes | `stress_report.md`, MRRG plan |
+| The suite still passes after the near-IOB and rip-up changes | re-checked case by case on 2026-11-07: `dfg_big` [31] 506 cyc, `chain12` [4,6] 518, `dfg_multi` [8,-2] 358, `dfg_scale` 11, `dfg_mixed` 13, `l4w5o3c3` [6,6,4] 698 |
 
 ## Open, with the next concrete action
 
