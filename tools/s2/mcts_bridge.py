@@ -1220,8 +1220,16 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                    % (si, max(64, CAP_CYCLES)))
         mn += 'int main(void) {\n'
         for si, n, val in din_meta:
-            mn += ('  for (int i = 0; i < %d; i++) c%d[i] = %d;\n'
-                   % (max(64, CAP_CYCLES), si, val))
+            if os.environ.get('S2_INPUT_RAMP', '0') == '1':
+                # per-sample-varying stimulus: a change that shifts *when* a
+                # value arrives can still pass with constant inputs, so timing
+                # changes (re-scheduling, delay insertion) need this to be
+                # validated at all
+                mn += ('  for (int i = 0; i < %d; i++) c%d[i] = %d + i;\n'
+                       % (max(64, CAP_CYCLES), si, val))
+            else:
+                mn += ('  for (int i = 0; i < %d; i++) c%d[i] = %d;\n'
+                       % (max(64, CAP_CYCLES), si, val))
         mn += '  void* din[%d]; void* dout[%d];\n' % (max(len(din_meta), 1), len(caps))
         for si, n, val in din_meta:
             mn += '  din[%d] = (void*)c%d;\n' % (si, si)
