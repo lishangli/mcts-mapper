@@ -663,10 +663,23 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                     set_gib_bits(slot, gib, dstport, idx, label)
         # topo-ordered parity-aware ctx assignment (S2 scheduler core)
         order = []; visd = set()
+        # S2_TOPO changes the DFS neighbour order, which yields a different but
+        # still topological schedule: congestion depends on which long edge
+        # claims the shared wires first, so trying a second order per placement
+        # is cheap (mapping only, no new placement).
+        _topo = int(os.environ.get('S2_TOPO', '0'))
+        def _neigh(nid):
+            ps = preds[nid]
+            if _topo == 1:
+                return list(reversed(ps))
+            if _topo == 2:
+                return sorted(ps)
+            return ps
+
         def visit(nid):
             if nid in visd: return
             visd.add(nid)
-            for p_ in preds[nid]: visit(p_)
+            for p_ in _neigh(nid): visit(p_)
             order.append(nid)
         for nid in node_by_id: visit(nid)
         route_of = {}
