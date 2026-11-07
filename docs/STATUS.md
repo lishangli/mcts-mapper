@@ -40,17 +40,31 @@ testbench with **data that varies per sample** — the convolution's AG window i
 the only such kernel here. Without it, a mapping change can pass every test and
 still be wrong on real data.
 
-First attempt at such a testbench (`S2_INPUT_RAMP=1`, `check_seq.py`), and what
-it did and did not establish:
+The ramp testbench now runs and it **fails the default flow**, which is the most
+important open correctness result in this repo:
 
-* the run does show the outputs are data-dependent now (`nn3x2` captures
-  `[252, 369]` where the constant stimulus gives `[10, 14]`), so a shifted
-  schedule can no longer hide behind identical samples;
-* it is **not yet a pass/fail criterion**: the captured sequence starts with the
-  pipeline's warm-up zeros and the reference has no warm-up model, so
-  `check_seq.py` cannot align the two (it reports "MISMATCH" with no offset for
-  both channels). Treat the ramp run as evidence of sensitivity, not as a
-  verified correctness test, until the alignment model exists.
+```
+nn3x2, 64 samples, S2_INPUT_RAMP=1 (stream i carries base_i + j at sample j)
+  channel 0: 49 consecutive samples fit  capture[i] = ref(i-15) + 2
+  channel 1: 50 consecutive samples fit  capture[i] = ref(i-12) - 2
+```
+
+A constant residual that persists for 50 samples is not noise and not latency:
+it means the operands of a node are reading **different sample indices**, i.e.
+the mapping is wrong for data that varies per sample even though it is bit-exact
+on constant streams.
+
+The obvious fix does not work: re-enabling the mod-4 delivery check
+(`S2_NO_PHASE=0`, the constraint that would force every operand of a node into
+the same context) makes `nn3x2` **fail to map** (6 remaps, final conflict
+`54 otrackS_0`: edge16 wants idx 2, stream5 wants idx 4). So the alignment has to
+be restored in the emitter's delivery path rather than by refusing to schedule.
+
+Scope of the damage, stated precisely: every **throughput** figure in this repo
+was measured with constant stimuli and the same schedule, so those numbers stand.
+What is now unproven is the stronger claim that the flow is correct for real
+(non-constant) data. Next step: ramp one input at a time to identify which
+operand carries the skew.
 
 ## Retracted claims (kept so they are not repeated)
 
