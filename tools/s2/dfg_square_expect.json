@@ -1,0 +1,7 @@
+{
+ "name": "square",
+ "expect": [
+  1
+ ],
+ "note": "y = x*x with the constant stimulus x=1"
+}

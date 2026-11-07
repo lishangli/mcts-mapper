@@ -1,0 +1,7 @@
+{
+ "name": "quad",
+ "expect": [
+  2
+ ],
+ "note": "y = (x+1)*x with the constant stimulus x=1"
+}

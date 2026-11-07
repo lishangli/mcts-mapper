@@ -60,6 +60,17 @@ the same context) makes `nn3x2` **fail to map** (6 remaps, final conflict
 `54 otrackS_0`: edge16 wants idx 2, stream5 wants idx 4). So the alignment has to
 be restored in the emitter's delivery path rather than by refusing to schedule.
 
+Reproduced on the smallest possible graph, so this is the emitter and not the
+generator: `dfg_quad.json` is `y = (x+1)*x` (one stream, one constant, two
+compute nodes) and a quadratic grid search fits **skew = -1 sample** (rmse 0.38
+over 56 samples) where the aligned hypothesis is off by 30x (rmse 31). A
+quadratic kernel is required here: on a linear one, a latency and a skew are
+indistinguishable.
+
+The mechanism is now clear: a node's two operands arrive over paths of different
+length (the `x+1` branch has an extra hop), and nothing in the emitter equalises
+them, so the multiply reads sample j on one input and j-1 on the other.
+
 Scope of the damage, stated precisely: every **throughput** figure in this repo
 was measured with constant stimuli and the same schedule, so those numbers stand.
 What is now unproven is the stronger claim that the flow is correct for real
