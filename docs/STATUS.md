@@ -27,6 +27,19 @@ later session) does not have to reconstruct it from the experiment logs.
 | Dense-layer throughput stays ~3.7 ops/cycle | It is memory-bound by construction (one multiply per activation); the fix is kernels with tap reuse, not more batching |
 | `S2_REPEAT > 1` hangs | The controller rejects a second `execute()` without reconfiguration; multi-iteration must come from the schedule |
 
+## A methodological limit worth knowing
+
+Every kernel in this suite feeds **constant** streams (`gen_nn`, `gen_dag` write
+one value into the whole input array), so a change that shifts *when* a value
+arrives can still produce the right numbers. That is why the failed
+delay-freedom experiment produced wrong values only for `nn2x6`'s shape and not
+for the smaller kernels: constant inputs cannot validate timing changes.
+
+Any future re-scheduling work (II, delay insertion, node re-timing) needs a
+testbench with **data that varies per sample** — the convolution's AG window is
+the only such kernel here. Without it, a mapping change can pass every test and
+still be wrong on real data.
+
 ## Retracted claims (kept so they are not repeated)
 
 * 0.52 cycles/sample and 31 ops/cycle — came from runs whose captured values were
