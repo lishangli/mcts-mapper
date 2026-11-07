@@ -52,7 +52,9 @@ python gen_dag.py --shape chain --layers 12 --outputs 2 --consts 3 --name chain1
 
 ## Status (2026-11-07)
 
-* Regression `python regression.py` → **12/12 PASS**, including `dfg_big` (10 compute PEs,
+* Regression `python regression.py` runs **12 cases**; in the last full batch run
+  10 of them passed together, and after the routing changes all 12 were re-run
+  individually and pass (see `docs/STATUS.md`). The cases include `dfg_big` (10 compute PEs,
   6 IOB streams), a 12-stage chain with two capture channels, two dense layers
   (`nn3x2`, `nn4x2`) and a **20-node layered DAG**.
 * Capacity: the previous 12-node wall was an artefact of the mod-4 delivery
