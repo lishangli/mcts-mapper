@@ -81,8 +81,27 @@ def main():
     for dfg, expect in cases:
         for k in range(rep):
             tag = 'pf_%s_%d' % (os.path.splitext(dfg)[0], k)
-            p = subprocess.run([os.path.join(S2, 'run_dfg.sh'), dfg, tag],
-                               capture_output=True, text=True, cwd=S2)
+            # A placement can emit a program that never returns (measured: one
+            # in ~6 dfg_quad runs with operand alignment on). Without a timeout
+            # that is a silent hang, so bound it and remap instead of waiting.
+            tries = int(os.environ.get('S2_SIM_RETRY', '3'))
+            tmo = int(os.environ.get('S2_SIM_TIMEOUT', '300'))
+            p = None
+            for t_ in range(tries):
+                try:
+                    p = subprocess.run([os.path.join(S2, 'run_dfg.sh'), dfg, tag],
+                                       capture_output=True, text=True, cwd=S2,
+                                       timeout=tmo)
+                    break
+                except subprocess.TimeoutExpired:
+                    print('%-28s   -> simulator produced no result in %ds, remapping (%d/%d)'
+                          % (dfg, tmo, t_ + 1, tries))
+                    for f in (os.path.join(OUT, tag + '_run.log'),):
+                        if os.path.exists(f):
+                            os.remove(f)
+                    p = None
+            if p is None:
+                p = subprocess.CompletedProcess([], 1, '', 'timeout')
             perf = measure(tag) or {}
             log = os.path.join(OUT, tag + '_run.log')
             # a mapping failure aborts run_dfg.sh before the simulator runs, so
