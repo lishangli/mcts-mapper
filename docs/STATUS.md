@@ -67,7 +67,15 @@ over 56 samples) where the aligned hypothesis is off by 30x (rmse 31). A
 quadratic kernel is required here: on a linear one, a latency and a skew are
 indistinguishable.
 
-**Partial fix in the tree (2026-11-07)**: the router now routes every operand of
+**Alignment is implemented but not enabled (2026-11-07)**: routing every operand
+of a node at the same delay does remove the skew (`dfg_quad`: -1 -> **0**,
+rmse 0.00), but on some placements it makes the node read the *same* source on
+both operand pins — `dfg_quad` then computes `(x+1)^2` instead of `(x+1)*x`.
+That is a worse failure than the skew, so `S2_ALIGN_OPNDS` defaults to **off**
+and the flag stays for experiments. The collision is between a stream path and a
+compute path on the same mux port and is the next thing to fix.
+
+**Earlier partial fix in the tree (2026-11-07)**: the router routes every operand of
 a node at the *same* registered-hop delay (`S2_ALIGN_OPNDS`, default on), using
 a new `route_exact` and a delay argument on `iob_stream_route` so a stream pin
 matches the node's routed operands too. Effect: `dfg_quad` goes from skew -1

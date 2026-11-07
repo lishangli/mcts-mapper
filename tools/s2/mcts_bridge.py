@@ -103,7 +103,16 @@ NO_PHASE = os.environ.get(
 # A PE samples all input pins in one cycle, so equal delay is the only way the
 # node multiplies the same sample twice; the mod-4 residue is not enough (the
 # ramp testbench measured a one-sample skew without this).
-ALIGN_OPNDS = os.environ.get('S2_ALIGN_OPNDS', '1') == '1'
+# Default OFF: it removes the sample skew on a single node (dfg_quad: -1 -> 0),
+# but on some placements it makes the node read the SAME source on both operand
+# pins (dfg_quad then computed (x+1)^2 instead of (x+1)*x), which is a worse
+# failure than the skew. Re-enable per run with S2_ALIGN_OPNDS=1 once the
+# stream/compute mux collision behind that is fixed.
+ALIGN_OPNDS = os.environ.get('S2_ALIGN_OPNDS', '0') == '1'
+# Nodes whose operands could not be padded to a common delay. A misaligned node
+# still maps and still passes the constant-stimulus regression, so this list is
+# the only visible record of a correctness hole.
+ALIGN_FAILS = []
 
 class Occ:
     """Routing occupancy, keyed by (gib, port).
@@ -565,6 +574,8 @@ def iob_rows(n, is_store, mux):
 placement = None
 EMIT_OK = False
 for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
+    # only the events of the attempt that finally succeeds may be reported
+    ALIGN_FAILS.clear()
     mapping = Mapping(dfg, adg, ops, False)
     mapping.use_true_reward()
     # Retry diversity: a near-greedy policy (temp 1e-2) reproduces almost the
@@ -836,7 +847,15 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                 marks = {e.id: claimed.get(e.id, []) for e in seq_}
                 keep = {e.id: (hs[e.id], route_of[e.id]) for e in seq_}
                 base_t = max(hs[e.id] for e in seq_)
-                for t in (base_t, base_t + 1):
+                # Try the longest delay first (no change to the critical operand),
+                # then shorter common delays: padding a 0-hop operand all the way
+                # to 9 hops often has no path, while 0 -> 3 does, and pulling the
+                # long operand down is usually cheaper than pushing the short one up.
+                # t = 0 is excluded: a zero-hop common delay is a purely
+                # combinational path, and with several operands it degenerates
+                # into both pins reading the same wire (measured on dfg_quad:
+                # the kernel then computed x*x instead of (x+1)*x).
+                for t in [base_t + 1] + list(range(base_t, 0, -1)):
                     for e in seq_:
                         occ.release(claimed.get(e.id, [])); claimed[e.id] = []
                     ok = True
@@ -856,6 +875,14 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                     for e in seq_:
                         claimed[e.id] = marks[e.id]
                         hs[e.id], route_of[e.id] = keep[e.id]
+                # A node that cannot be padded runs with misaligned operands, and
+                # that is silent: the mapping still succeeds and still passes the
+                # constant-stimulus regression. Count it and say which node.
+                ALIGN_FAILS.append((nid, op_of.get(nid), base_t,
+                                    [hs[e.id] for e in seq_]))
+                print('align-fail node %d (%s) target=%d delays=%s'
+                      % (nid, op_of.get(nid), base_t,
+                         [hs[e.id] for e in seq_]))
                 return seq_[0]
 
             # A (src, dst) pair only accepts paths whose registered-hop delay hits
@@ -1355,8 +1382,10 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
         json.dump({'placement': placement, 'port_of': port_of,
                    'captures': caps, 'base_b': base_b,
                    'rowsA': len(rowsA), 'rowsB': len(rowsB),
-                   'din_meta': din_meta},
+                   'din_meta': din_meta,
+                   'align_fails': [list(x) for x in ALIGN_FAILS]},
                   open(OUT_DIR + '/bridge_meta.json', 'w'), indent=1)
+        print('align: %d node(s) with unequal operand delays' % len(ALIGN_FAILS))
         print('cin: %d rows (A=%d B=%d), iob_ens=0x%x, captures=%s' %
               (len(allrows), len(rowsA), len(rowsB), iob_ens, [s for s, _ in caps]))
         if STATS_ON:
