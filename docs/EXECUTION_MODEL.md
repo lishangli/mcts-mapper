@@ -335,6 +335,29 @@ Until then, the only verified streaming throughput is the single-stream one
 (`dfg_scale`: 0.83 cycles/sample), and `nn4x2` keeps its end-to-end
 867 cycles / 16 ops = 0.018 ops/cycle.
 
+
+### 3.7 The capture store is a fixed ~700-cycle cost
+
+Trying to cut the readback to speed up the measurement:
+
+| config | load | store | total | value |
+|---|---|---|---|---|
+| CAP=128, store 512 B | 104 | 720 | 861 | [6, 6, 4] ✓ |
+| CAP=128, store 64 B | 123 | **714** | 873 | [5, -6, 10] ✗ |
+
+Two conclusions:
+
+* the store phase costs ~700 cycles **whether it moves 64 B or 512 B** — it is
+  DMA setup/queueing, not bandwidth, so shrinking the readback cannot amortise
+  anything;
+* reading back only 16 samples lands in the pipeline's transient region, so the
+  steady-state value is wrong: the readback must cover the settled part of the
+  window.
+
+The only lever that improves end-to-end throughput is therefore **more work per
+launch** (more samples and/or more operators per sample), which is what the
+batch sweep measures: 2.97 ops/cycle at 20 nodes × 128 samples.
+
 ## 4. What this implies for neural-network workloads
 
 * The array executes **64 integer ops/cycle at peak**; a LeNet-class convolution
