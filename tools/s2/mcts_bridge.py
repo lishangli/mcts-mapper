@@ -1058,7 +1058,13 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                     slot_gpe[1 - src_slot][pe] = slot_gpe[src_slot][pe]
         # OUTPUT capture: one IOB channel per OUTPUT node (multi-output DFGs)
         caps = []   # (iob_sel, pi_c, out name)
+        # S2_MAX_CAPS limits how many output channels are read back. The kernel
+        # still computes all of them; this isolates the per-channel DMA cost of
+        # the measurement, which is ~240 cycles per channel (§3.7).
+        MAX_CAPS = int(os.environ.get('S2_MAX_CAPS', '99'))
         for onid in sorted(nid for nid in node_by_id if op_of[nid] == 'OUTPUT'):
+            if len(caps) >= MAX_CAPS:
+                break
             src_pe = PEBLK_INV[placement[[e.tail for e in EDGES if e.head == onid][0]]]
             iob_sel = None
             mapper_iob = placement.get(onid)

@@ -358,6 +358,30 @@ The only lever that improves end-to-end throughput is therefore **more work per
 launch** (more samples and/or more operators per sample), which is what the
 batch sweep measures: 2.97 ops/cycle at 20 nodes × 128 samples.
 
+
+### 3.8 Throughput probe: more work per launch, one readback channel
+
+`S2_MAX_CAPS=N` limits how many output channels are read back (the kernel still
+computes all of them), which isolates the per-channel DMA cost.
+
+| config | samples | ops | load | store | total | ops/cycle | ch0 |
+|---|---|---|---|---|---|---|---|
+| CAP=128, 3 captures | 128 | 2560 | 104 | 720 | 861 | 2.97 | 6 ✓ |
+| CAP=256, 1 capture | 256 | 5120 | 765 | 81 | 1378 | **3.71** | 6 ✓ |
+
+Two effects, both measured: dropping to one readback removes ~640 cycles of DMA
+(720 → 81) and doubling the batch doubles the work, while the load phase grows to
+765 cycles because 256 samples × 2 streams must be brought in. Net: 2.97 → 3.71
+ops/cycle (5.8 % of the 64 ops/cycle ceiling).
+
+The load phase is now the largest term, which is the honest bottleneck for this
+flow: every sample must be DMAd in, and the array's work per sample (20 ops) is
+done in a few cycles. A kernel with more arithmetic per input — a 3×3
+convolution, or a dense layer reusing one activation across many weights —
+is where this machine can actually show throughput; the current generator
+produces one multiply per activation per neuron, so it is memory-bound by
+construction.
+
 ## 4. What this implies for neural-network workloads
 
 * The array executes **64 integer ops/cycle at peak**; a LeNet-class convolution
