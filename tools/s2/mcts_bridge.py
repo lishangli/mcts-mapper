@@ -1219,8 +1219,14 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
             mn += ('int c%d[%d] __attribute__((aligned(64)));\n'
                    % (si, max(64, CAP_CYCLES)))
         mn += 'int main(void) {\n'
+        # S2_RAMP_ONE=k ramps a single stream and leaves the others constant:
+        # the output then changes by w_k per sample, so the residual of that
+        # channel says which operand carries the sample skew and by how much.
+        _ramp_one = int(os.environ.get('S2_RAMP_ONE', '-1'))
         for si, n, val in din_meta:
-            if os.environ.get('S2_INPUT_RAMP', '0') == '1':
+            _ramp = (os.environ.get('S2_INPUT_RAMP', '0') == '1'
+                     and (_ramp_one < 0 or si == _ramp_one))
+            if _ramp:
                 # per-sample-varying stimulus: a change that shifts *when* a
                 # value arrives can still pass with constant inputs, so timing
                 # changes (re-scheduling, delay insertion) need this to be

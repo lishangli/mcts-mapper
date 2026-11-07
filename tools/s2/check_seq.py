@@ -42,14 +42,18 @@ def load_bases(dfg_path, log_path):
         if os.path.exists(c):
             txt = open(c).read()
             break
+    # stream -> (base, ramped?). S2_RAMP_ONE ramps a single stream, so the
+    # pattern has to be read per array rather than assumed for all of them.
     bases = {}
     for i, v in re.findall(r'c(\d+)\[i\] = (\d+) \+ i', txt):
-        bases[int(i)] = int(v)
+        bases[int(i)] = (int(v), True)
+    for i, v in re.findall(r'c(\d+)\[i\] = (\d+);', txt):
+        bases.setdefault(int(i), (int(v), False))
     if bases:
         return bases
     dfg = json.load(open(dfg_path))
-    return {o['_gvid']: 1 for o in dfg['objects']
-            if o['opcode'].upper() == 'INPUT'}
+    return {k: (1, True) for k, _ in enumerate(
+        o for o in dfg['objects'] if o['opcode'].upper() == 'INPUT')}
 
 
 def reference(dfg_path, bases, samples):
@@ -60,13 +64,14 @@ def reference(dfg_path, bases, samples):
         ins[e['head']].append((e['tail'], e['operand']))
     insorted = sorted(o['_gvid'] for o in dfg['objects']
                       if o['opcode'].upper() == 'INPUT')
-    base_of = {n: bases.get(k, 1) for k, n in enumerate(insorted)}
+    base_of = {n: bases.get(k, (1, True)) for k, n in enumerate(insorted)}
 
     def value(nid, j):
         o = objs[nid]
         op = o['opcode'].upper()
         if op == 'INPUT':
-            return base_of.get(nid, 1) + j
+            b, ramped = base_of.get(nid, (1, True))
+            return b + (j if ramped else 0)
         if op == 'CONST':
             return int(o['value'], 0)
         args = sorted(ins[nid], key=lambda t: t[1])
