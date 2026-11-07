@@ -416,6 +416,41 @@ Consequences:
   amortisation must come from II scheduling or a longer per-launch window, not
   from re-issuing the command.
 
+
+## 4b. Model of the convolution path (spatial, AG streamed)
+
+The conv2d_3x3 kernel is a different machine mode from §1–3: one configuration,
+the AG streams a 9-tap window over a 16×16 image, and 196 interior outputs come
+out. Measured (deterministic within a build):
+
+```
+cycles  = 178 .. 195          (build variant, see tools/conv/run.sh)
+outputs = 14 × 14 = 196
+MACs    = 196 × 9 = 1764
+ops     = 3528
+```
+
+```
+cycles/output = 0.91 .. 1.00     -> about one output per cycle
+MACs/cycle    = 9.0 .. 9.9
+ops/cycle     = 18.1 .. 19.8     (28 .. 31 % of the 64 ops/cycle ceiling)
+```
+
+The model is therefore
+
+```
+cycles ≈ outputs × 1          (taps are free in time: they are spatial)
+ops    = outputs × taps × 2
+ops/cycle = 2 × taps × (outputs / cycles) ≈ 2 × taps
+```
+
+i.e. **throughput grows with the tap count, not with the batch**: a 3×3 filter
+sustains ~2×9 = 18 ops/cycle, and a 5×5 filter would sustain ~2×25 = 50 ops/cycle
+(78 % of the ceiling) at the same one-output-per-cycle rate, provided the 25
+taps fit in the array. That is the actionable prediction of this model, and it is
+also why the dense-layer flow, with one tap per activation, tops out near 2–4
+ops/cycle however large the batch.
+
 ## 4.1 Neural-network kernels measured so far
 
 `gen_nn.py` emits `y_o = sum_i w[o][i] * x_i + b[o]` as MUL/ADD nodes with the
