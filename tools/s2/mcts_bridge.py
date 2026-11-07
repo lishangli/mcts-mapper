@@ -565,6 +565,34 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
     # 20-node case, so this stays an experiment until it is measured better
     if os.environ.get('S2_LOCALITY', '0') == '1':
         placement = _locality(dict(placement))
+
+    # Move each stream's IOB to the one nearest its consumer. The mapper picks
+    # the IOB position blindly, and a long IOB route is what turns into
+    # 'no const IOB' once the compute graph has claimed the neighbourhood.
+    if os.environ.get('S2_IOB_NEAR', '1') == '1':
+        _pos = {x['id']: (x.get('x'), x.get('y'))
+                for x in json.load(open(ADG_JSON))['instances']}
+        _used = {v for v in placement.values() if v is not None}
+        _iobs = list(range(1, 17)) + list(range(307, 323))
+        for _nid, _adg in list(placement.items()):
+            if _adg is None or not (_adg < 16 or _adg >= 307):
+                continue
+            _cons = [e.head for e in EDGES if e.tail == _nid]
+            if not _cons:
+                continue
+            _cx, _cy = _pos.get(placement[_cons[0]], (999, 999))
+            _best, _bd = None, 1 << 30
+            for _iob in _iobs:
+                if _iob in _used and _iob != _adg:
+                    continue
+                _x, _y = _pos.get(_iob, (999, 999))
+                _d = abs(_x - _cx) + abs(_y - _cy)
+                if _d < _bd:
+                    _best, _bd = _iob, _d
+            if _best is not None and _best != _adg:
+                _used.discard(_adg)
+                _used.add(_best)
+                placement[_nid] = _best
     def on_iob(adg_id):
         return adg_id is not None and (adg_id < 16 or adg_id >= 307)
 
