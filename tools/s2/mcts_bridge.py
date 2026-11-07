@@ -825,6 +825,11 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                         for v in victims:
                             p = route_parity(v['src'], v['dst'], v['port'],
                                              v['hs'] % 4, occ=occ, c0=v['c0'])
+                            # The delay must be reproduced exactly: NO_PHASE drops
+                            # the context constraint, but two operands of one node
+                            # still have to arrive in the same cycle, so changing a
+                            # victim's delay silently misaligns them (measured:
+                            # nn2x6 mapped to [0,1,2] instead of [8,4,7,5,4,7]).
                             if p is None or path_delay(p) != v['hs']:
                                 good = False
                                 break
