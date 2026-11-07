@@ -1386,6 +1386,10 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                    'align_fails': [list(x) for x in ALIGN_FAILS]},
                   open(OUT_DIR + '/bridge_meta.json', 'w'), indent=1)
         print('align: %d node(s) with unequal operand delays' % len(ALIGN_FAILS))
+        if os.environ.get('S2_DUMP_MUX') == '1':
+            for (slot_, blk_, dp_), (lab_, idx_) in sorted(gib_owner.items()):
+                print('mux slot%d blk=%d port=%s idx=%d <- %s'
+                      % (slot_, blk_, dp_, idx_, lab_))
         print('cin: %d rows (A=%d B=%d), iob_ens=0x%x, captures=%s' %
               (len(allrows), len(rowsA), len(rowsB), iob_ens, [s for s, _ in caps]))
         if STATS_ON:
