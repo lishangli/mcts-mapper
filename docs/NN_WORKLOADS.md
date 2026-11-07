@@ -29,6 +29,10 @@ ops = 196 outputs x 9 MACs x 2 ops = 3528
 throughput = 3528 / 178 = 19.8 ops/cycle   (31 % of the 64 ops/cycle ceiling)
 ```
 
+**Repeatability**: three runs of the same ELF give 178 cycles each, i.e. the
+number is deterministic in this configuration (0.91 cycles per output, 9.9
+MAC/cycle, ~1 output per cycle).
+
 This is the high-performance datapoint and it explains the others: the
 convolution reuses every input across nine taps and streams 196 outputs from one
 configuration, so the launch cost and the input DMA are amortised over real
