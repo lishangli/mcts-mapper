@@ -40,6 +40,18 @@ testbench with **data that varies per sample** — the convolution's AG window i
 the only such kernel here. Without it, a mapping change can pass every test and
 still be wrong on real data.
 
+First attempt at such a testbench (`S2_INPUT_RAMP=1`, `check_seq.py`), and what
+it did and did not establish:
+
+* the run does show the outputs are data-dependent now (`nn3x2` captures
+  `[252, 369]` where the constant stimulus gives `[10, 14]`), so a shifted
+  schedule can no longer hide behind identical samples;
+* it is **not yet a pass/fail criterion**: the captured sequence starts with the
+  pipeline's warm-up zeros and the reference has no warm-up model, so
+  `check_seq.py` cannot align the two (it reports "MISMATCH" with no offset for
+  both channels). Treat the ramp run as evidence of sensitivity, not as a
+  verified correctness test, until the alignment model exists.
+
 ## Retracted claims (kept so they are not repeated)
 
 * 0.52 cycles/sample and 31 ops/cycle — came from runs whose captured values were
