@@ -449,7 +449,15 @@ sustains ~2×9 = 18 ops/cycle, and a 5×5 filter would sustain ~2×25 = 50 ops/c
 (78 % of the ceiling) at the same one-output-per-cycle rate, provided the 25
 taps fit in the array. That is the actionable prediction of this model, and it is
 also why the dense-layer flow, with one tap per activation, tops out near 2–4
-ops/cycle however large the batch.
+ops/cycle however large the batch — which is what the dense measurements show
+(1.98 for `nn4x2`, 3.67 for the 20-node DAG).
+
+**Status of the prediction**: the low end is confirmed by the dense kernels; the
+high end (5×5 → ~50 ops/cycle) is *not* measured. Producing a 5×5 DFG needs the
+`cgra-compiler` front end, and this machine only has the pass library and the
+mapper binary — the `llvm-project` build that turns C into the affine DFG is
+absent, so a new kernel cannot be compiled here. The prediction stands as a
+falsifiable claim, not as a result.
 
 ## 4.1 Neural-network kernels measured so far
 
