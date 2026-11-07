@@ -8,9 +8,9 @@ later session) does not have to reconstruct it from the experiment logs.
 | Claim | Evidence |
 |---|---|
 | Convolution layer runs bit-exactly | conv2d_3x3: 42/42 defined outputs, transposed tap order; `tools/conv/`, `tools/s2/check_conv2d.py` |
-| Convolution sustains **19.8 ops/cycle** (31 % of the 64 ops/cycle ceiling) | 3528 ops in 178 cycles, identical across three runs |
+| Convolution sustains **18.1–19.8 ops/cycle** (28–31 % of the 64 ops/cycle ceiling) | 3528 ops in 178 (one execute variant) / 195 cycles (the one `tools/conv/run.sh` builds), deterministic per build; `tools/conv/run.sh` reproduces it in one command |
 | Dense layers run bit-exactly | `nn3x2` [10,14]; `nn4x2` [18,21] at 64/128/256 samples |
-| A 20-node DAG maps and runs bit-exactly | `dfg_dag_l4w5o3c3` [6,6,4]; 2.97 ops/cycle at 128 samples |
+| A 20-node DAG maps and runs bit-exactly | `dfg_dag_l4w5o3c3` [6,6,4]; **3.67 ops/cycle** at 128 samples (698 cycles) after the near-IOB placement pass |
 | Dense-layer throughput scales with batch | 1.18 → 1.57 → 1.98 ops/cycle for 64/128/256 samples |
 | The mod-4 delivery constraint was over-conservative | `S2_NO_PHASE=1` passes `dfg_chain5` (9) and `dfg_big` (31); it is now the default |
 | The capture store is a fixed ~700-cycle cost | 512 B and 64 B stores both cost ~715 cycles |
@@ -21,7 +21,7 @@ later session) does not have to reconstruct it from the experiment logs.
 
 | Open item | Next action |
 |---|---|
-| A 24-node DAG (LeNet-class width) does not map | It now routes all nodes and dies on the last constant stream / last long edge. Options: reserve IOBs at placement time, or allow victims to change delay and re-schedule their consumers |
+| A 24-node DAG (LeNet-class width) does not map | 60 of the nodes route (near-IOB placement + cross-node rip-up); it dies on the last one or two edges. Tuning is exhausted — the next step is structural: a time-expanded (PE, ctx) resource graph, or allowing a victim to change delay with its consumers re-scheduled |
 | No II > 1 modulo scheduling | Implement a (PE, ctx) time-expanded resource graph; the RTL already rotates 4 contexts with `exe_ii = 2` |
 | Dense-layer throughput stays ~3.7 ops/cycle | It is memory-bound by construction (one multiply per activation); the fix is kernels with tap reuse, not more batching |
 | `S2_REPEAT > 1` hangs | The controller rejects a second `execute()` without reconfiguration; multi-iteration must come from the schedule |
