@@ -404,7 +404,11 @@ def route_exact(src_inst, dst_inst, port, target, occ=(), c0=None):
     terms = set(tuple(p) for p in IW['pe_out'][str(src_inst)])
     start = tuple(tgt)
     q = deque([(start, 0, [])]); seen = {(start, 0)}
-    while q:
+    # The state space is (wire, delay); without a pops budget a target that has
+    # no path explores the whole array and a single node can take minutes.
+    budget = 20000
+    while q and budget > 0:
+        budget -= 1
         (g, p), d, pa = q.popleft()
         if (g, p) in terms and pa and d == target:
             keys = [(ent[0], ent[1]) for ent in pa]
