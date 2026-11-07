@@ -22,7 +22,7 @@ later session) does not have to reconstruct it from the experiment logs.
 
 | Open item | Next action |
 |---|---|
-| A 24-node DAG (LeNet-class width) does not map | 60 of the nodes route (near-IOB placement + cross-node rip-up); it dies on the last one or two edges. Tuning is exhausted — the next step is structural: a time-expanded (PE, ctx) resource graph, or allowing a victim to change delay with its consumers re-scheduled |
+| A 24-node DAG (LeNet-class width) does not map — the *correct* next attempt is known | Allowing a rip-up victim to change delay made it map but produced wrong values (`[0,1,2]` vs `[8,4,7,5,4,7]`), proving the rule: two operands of one node must arrive in the same cycle. So a victim may change delay only if **all operands of its node are re-routed together** with a consistent alignment. That is a bounded change and the next thing to implement | 60 of the nodes route (near-IOB placement + cross-node rip-up); it dies on the last one or two edges. Tuning is exhausted — the next step is structural: a time-expanded (PE, ctx) resource graph, or allowing a victim to change delay with its consumers re-scheduled |
 | No II > 1 modulo scheduling | Implement a (PE, ctx) time-expanded resource graph; the RTL already rotates 4 contexts with `exe_ii = 2` |
 | Dense-layer throughput stays ~3.7 ops/cycle | It is memory-bound by construction (one multiply per activation); the fix is kernels with tap reuse, not more batching |
 | `S2_REPEAT > 1` hangs | The controller rejects a second `execute()` without reconfiguration; multi-iteration must come from the schedule |
