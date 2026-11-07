@@ -791,7 +791,8 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                                 p, path_slots(p, v['c0']) if SLOT_OCC else None)
                             route_of[v['eid']] = p
                         if good:
-                            print('ripup %d edge(s) for %d->%d' % (k, e.tail, e.head))
+                            print('ripup %d edge(s) for %d->%d'
+                                  % (len(victims), e.tail, e.head))
                             return None
                     occ.cfg, occ.rd = snap
                     for v, m in zip(victims, marks):
