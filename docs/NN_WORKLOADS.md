@@ -122,7 +122,7 @@ window:
 
 | kernel | samples | ops | load | store | total | ops/cycle | value |
 |---|---|---|---|---|---|---|---|
-| `l4w5o3c3` | 128 | 2560 | 104 | 720 | 861 | **2.97** | [6, 6, 4] ✓ |
+| `l4w5o3c3` | 128 | 2560 | 61 | 579 | 698 | **3.67** | [6, 6, 4] ✓ |
 
 That is the best verified figure so far (4.6 % of the 64 ops/cycle ceiling), and
 it is higher than `nn4x2` at the same idea (1.98) simply because the kernel has

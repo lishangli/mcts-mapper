@@ -6,7 +6,7 @@ A CGRA Mapping Algorithm Project Based on MCTS-RL
 | kernel | verification | cost | throughput |
 |---|---|---|---|
 | conv2d_3x3 (real convolution, AG streamed) | **42/42 outputs bit-exact** | 178 cycles, 3 runs identical | **19.8 ops/cycle (31 % of the 64 ops/cycle array peak)** |
-| 20-node dense DAG (`tools/s2`) | `[6, 6, 4]` bit-exact | 861 cycles @ 128 samples | 2.97 ops/cycle |
+| 20-node dense DAG (`tools/s2`) | `[6, 6, 4]` bit-exact | 698 cycles @ 128 samples | 3.67 ops/cycle |
 | dense layers `nn3x2` / `nn4x2` | bit-exact | 34 / 867 cycles | 1.18–1.98 ops/cycle |
 
 The two orders of magnitude between the rows are not a hardware property: the
