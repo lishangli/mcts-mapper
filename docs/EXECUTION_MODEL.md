@@ -381,7 +381,8 @@ Two conclusions:
 
 The only lever that improves end-to-end throughput is therefore **more work per
 launch** (more samples and/or more operators per sample), which is what the
-batch sweep measures: 3430 ops/cycle at 20 nodes × 128 samples — 3.67 ops/cycle.
+batch sweep measures: 3.67 ops/cycle at 20 nodes × 128 samples (2560 ops in 698
+cycles).
 
 Note for throughput probes: mapping is stochastic, and a probe can fail before
 the simulator runs (a 512-sample run exhausted the 12-remap budget on one
