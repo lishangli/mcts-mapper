@@ -843,6 +843,8 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                 """
                 if not ALIGN_OPNDS or len(seq_) < 2:
                     return None
+                if len({hs[e.id] for e in seq_}) == 1:
+                    return None      # already aligned: re-routing only churns paths
                 snap = (copy.deepcopy(occ.cfg), copy.deepcopy(occ.rd))
                 marks = {e.id: claimed.get(e.id, []) for e in seq_}
                 keep = {e.id: (hs[e.id], route_of[e.id]) for e in seq_}
@@ -855,7 +857,15 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                 # combinational path, and with several operands it degenerates
                 # into both pins reading the same wire (measured on dfg_quad:
                 # the kernel then computed x*x instead of (x+1)*x).
-                for t in [base_t + 1] + list(range(base_t, 0, -1)):
+                # Order matters: the longest delay first (no change to the critical
+                # operand), then one more hop, then shorter common delays. Trying
+                # base_t+1 first used to be harmless but changed the paths enough
+                # to make a node read one source on both pins.
+                # Only the two targets that were ever shown correct (round 4,
+                # dfg_quad rmse 0.00). The wider search from round 5 made mapping
+                # take >10 minutes per attempt without emitting, and produced
+                # placements where a node read one source on both pins.
+                for t in (base_t, base_t + 1):
                     for e in seq_:
                         occ.release(claimed.get(e.id, [])); claimed[e.id] = []
                     ok = True
