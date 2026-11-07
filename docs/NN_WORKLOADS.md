@@ -31,7 +31,10 @@ throughput = 3528 / 178 = 19.8 ops/cycle   (31 % of the 64 ops/cycle ceiling)
 
 **Repeatability**: three runs of the same ELF give 178 cycles each, i.e. the
 number is deterministic in this configuration (0.91 cycles per output, 9.9
-MAC/cycle, ~1 output per cycle).
+MAC/cycle, ~1 output per cycle). Building through `tools/conv/run.sh` (which
+takes the execute variant from the benchmark directory) gives 195 cycles and the
+same 42/42, i.e. 18.1 ops/cycle — the range 18.1–19.8 is build-variant noise, not
+run-to-run noise.
 
 This is the high-performance datapoint and it explains the others: the
 convolution reuses every input across nine taps and streams 196 outputs from one
@@ -42,7 +45,7 @@ memory-bound by construction.
 
 | kernel | ops | cycles | ops/cycle | status |
 |---|---|---|---|---|
-| conv2d_3x3 (spatial, AG streaming) | 3528 | 178 | **19.8** | 42/42 bit-exact |
+| conv2d_3x3 (spatial, AG streaming) | 3528 | 178–195 | **18.1–19.8** | 42/42 bit-exact |
 | l4w5o3c3 dense DAG (256 samples, 1 readback) | 5120 | 1378 | 3.71 | ch0 bit-exact |
 | nn4x2 (256 samples) | 4096 | 2066 | 1.98 | [18, 21] bit-exact |
 
