@@ -67,7 +67,15 @@ over 56 samples) where the aligned hypothesis is off by 30x (rmse 31). A
 quadratic kernel is required here: on a linear one, a latency and a skew are
 indistinguishable.
 
-**Alignment is implemented but not enabled (2026-11-07)**: routing every operand
+**Alignment is implemented but parked (2026-11-07)**: on the minimal kernel it
+works for both stimuli (`dfg_quad`: constant 2, ramp skew 0), but at layer scale
+`nn3x2` with `S2_ALIGN_OPNDS=1` produces a program that hangs in simulation on
+**every** attempt (0/1 PASS after 900 s = 3 x 300 s timeout), and about 1 in 6
+`dfg_quad` placements does the same. `perf.py` now bounds each run
+(`S2_SIM_TIMEOUT`, `S2_SIM_RETRY`) so a hang is a failed attempt rather than an
+infinite wait, which is a real improvement independent of alignment.
+
+**Earlier note: alignment implemented but not enabled**: routing every operand
 of a node at the same delay does remove the skew (`dfg_quad`: -1 -> **0**,
 rmse 0.00), but on some placements it makes the node read the *same* source on
 both operand pins — `dfg_quad` then computes `(x+1)^2` instead of `(x+1)*x`.
