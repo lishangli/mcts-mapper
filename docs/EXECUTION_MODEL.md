@@ -399,6 +399,7 @@ computes all of them), which isolates the per-channel DMA cost.
 |---|---|---|---|---|---|---|---|
 | CAP=128, 3 captures | 128 | 2560 | 104 | 720 | 861 | 2.97 | 6 ✓ |
 | CAP=256, 1 capture | 256 | 5120 | 765 | 81 | 1378 | **3.71** | 6 ✓ |
+| CAP=512, 1 capture | 512 | 10240 | 1379 | 25 | 2226 | **4.60** | 6 ✓ |
 
 Two effects, both measured: dropping to one readback removes ~640 cycles of DMA
 (720 → 81) and doubling the batch doubles the work, while the load phase grows to
