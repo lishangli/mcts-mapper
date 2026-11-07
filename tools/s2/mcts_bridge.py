@@ -99,6 +99,11 @@ SLOT_OCC = os.environ.get('S2_SLOT_OCC', '0') == '1'
 NO_PHASE = os.environ.get(
     'S2_NO_PHASE',
     '0' if os.environ.get('S2_PACK', '0') == '1' else '1') == '1'
+# S2_ALIGN_OPNDS=1 makes every operand of a node take the SAME path delay.
+# A PE samples all input pins in one cycle, so equal delay is the only way the
+# node multiplies the same sample twice; the mod-4 residue is not enough (the
+# ramp testbench measured a one-sample skew without this).
+ALIGN_OPNDS = os.environ.get('S2_ALIGN_OPNDS', '1') == '1'
 
 class Occ:
     """Routing occupancy, keyed by (gib, port).
@@ -375,8 +380,54 @@ def route_parity(src_inst, dst_inst, port, want, occ=(), c0=None):
             q.append((node, npar, pa + [(gib, dstport, idx)]))
     return None
 
-def iob_stream_route(dst_inst, port, avoid=(), occ=()):
-    """route IOB(out) -> PE in: BFS upstream from PE in pin to any unused IOB out pin"""
+def route_exact(src_inst, dst_inst, port, target, occ=(), c0=None):
+    """route whose CYCLE delay equals target exactly.
+
+    route_parity fixes only the residue mod 4, which is enough for the context
+    rotation but not for a node's operands: both operands of a PE enter in the
+    same cycle, so their path delays must be equal, not congruent. Routing the
+    shorter one at the longer one's delay is what removes the sample skew the
+    ramp testbench measures.
+    """
+    occ = as_occ(occ)
+    tgt = IW['pe_in'][str(dst_inst)].get(str(port))
+    if tgt is None: return None
+    terms = set(tuple(p) for p in IW['pe_out'][str(src_inst)])
+    start = tuple(tgt)
+    q = deque([(start, 0, [])]); seen = {(start, 0)}
+    while q:
+        (g, p), d, pa = q.popleft()
+        if (g, p) in terms and pa and d == target:
+            keys = [(ent[0], ent[1]) for ent in pa]
+            if len(keys) == len(set(keys)):
+                return pa
+            continue
+        if len(pa) >= 24 or d > target: continue
+        if pa and occ.strict and (g, p) in occ: continue
+        nd = d + (1 if is_reg(g, p) else 0)
+        if nd > target: continue
+        slot = None if c0 is None else (c0 - d) & 1
+        for kind, gib, dstport, idx, src in r.preds(g, p):
+            if kind == 'mux':
+                if not occ.write_ok((gib, dstport), idx, slot): continue
+            elif pa and not occ.read_ok((g, p), slot):
+                continue
+            node = src if kind == 'track' else (gib, src)
+            st = (node, nd)
+            if st in seen: continue
+            seen.add(st)
+            q.append((node, nd, pa + [(gib, dstport, idx)]))
+    return None
+
+def iob_stream_route(dst_inst, port, avoid=(), occ=(), delay=None):
+    """route IOB(out) -> PE in: BFS upstream from PE in pin to any unused IOB out pin.
+
+    delay: required registered-hop delay, or None for any. A stream pin is
+    sampled in the same cycle as the node's other operands, so when the node
+    also takes a routed edge the stream must take the same number of hops --
+    otherwise the multiply reads sample j from the stream and j-1 from the edge
+    (dfg_quad measured exactly that).
+    """
     occ = as_occ(occ)
     tgt = IW['pe_in'][str(dst_inst)].get(str(port))
     if tgt is None: return None
@@ -384,10 +435,11 @@ def iob_stream_route(dst_inst, port, avoid=(), occ=()):
     for n in range(32):
         for o in IW['iob_out'].get(str(n), []):
             terms[tuple(o)] = n
-    q = deque([(tuple(tgt), [])]); seen = {tuple(tgt)}
+    q = deque([(tuple(tgt), 0, [])]); seen = {(tuple(tgt), 0)}
     while q:
-        (g, p), pa = q.popleft()
-        if (g, p) in terms and pa and terms[(g, p)] not in avoid:
+        (g, p), d, pa = q.popleft()
+        if ((g, p) in terms and pa and terms[(g, p)] not in avoid
+                and (delay is None or d == delay)):
             return terms[(g, p)], pa
         if pa and occ.strict and (g, p) in occ: continue
         for kind, gib, dstport, idx, src in r.preds(g, p):
@@ -395,10 +447,11 @@ def iob_stream_route(dst_inst, port, avoid=(), occ=()):
                 if not occ.write_ok((gib, dstport), idx): continue
             elif pa and not occ.read_ok((g, p)):
                 continue
+            nd = d + (1 if is_reg(g, p) else 0)
             node = (gib, src) if kind != 'track' else src
-            if node not in seen:
-                seen.add(node)
-                q.append((node, pa + [(gib, dstport, idx)]))
+            if (node, nd) not in seen:
+                seen.add((node, nd))
+                q.append((node, nd, pa + [(gib, dstport, idx)]))
     return None
 
 def pick_iob(src_pe, avoid=(), occ=()):
@@ -768,6 +821,43 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                 if pins_before: port_used[di] = set(pins_before)
                 else: port_used.pop(di, None)
 
+            def align_operands(seq_):
+                """make every operand of this node arrive in the same cycle.
+
+                A PE samples all of its input pins at once, so the operands must
+                have equal path delay. The router otherwise picks each delay
+                freely, and the node silently multiplies sample j by sample j-1
+                (measured on dfg_quad: skew -1). Tries the current maximum delay,
+                then one more cycle.
+                """
+                if not ALIGN_OPNDS or len(seq_) < 2:
+                    return None
+                snap = (copy.deepcopy(occ.cfg), copy.deepcopy(occ.rd))
+                marks = {e.id: claimed.get(e.id, []) for e in seq_}
+                keep = {e.id: (hs[e.id], route_of[e.id]) for e in seq_}
+                base_t = max(hs[e.id] for e in seq_)
+                for t in (base_t, base_t + 1):
+                    for e in seq_:
+                        occ.release(claimed.get(e.id, [])); claimed[e.id] = []
+                    ok = True
+                    for e in seq_:
+                        p = route_exact(PEBLK_INV[placement[e.tail]], di,
+                                        port_of[e.id], t, occ=occ, c0=c0_use)
+                        if p is None:
+                            ok = False
+                            break
+                        claimed[e.id] = occ.claim(
+                            p, path_slots(p, c0_use) if SLOT_OCC else None)
+                        hs[e.id] = path_delay(p); route_of[e.id] = p
+                    if ok:
+                        return None
+                    occ.cfg = copy.deepcopy(snap[0])
+                    occ.rd = copy.deepcopy(snap[1])
+                    for e in seq_:
+                        claimed[e.id] = marks[e.id]
+                        hs[e.id], route_of[e.id] = keep[e.id]
+                return seq_[0]
+
             # A (src, dst) pair only accepts paths whose registered-hop delay hits
             # one residue mod 4. When that palette is empty the whole node must be
             # launched in another context; try the four offsets before giving up.
@@ -848,6 +938,11 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                         v['claimed'] = m
                     rewind()
                 return e
+
+            if fail is None:
+                fail = align_operands(seq)
+                if fail is not None:
+                    rewind()
 
             if fail is not None and CROSS_RIPUP:
                 fail = try_cross_ripup(fail)
@@ -960,6 +1055,7 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
         # holds exactly one constant vector, sharing an IOB would clobber values)
         din_meta = []
         used_iob = set()
+        sdly = {}   # consumer -> stream path delay, so sibling streams agree
         for si, (cnid, val, consumer, operand) in enumerate(iob_streams):
             e0 = next(e for e in EDGES if e.tail == cnid and e.head == consumer)
             opnd = operand if operand in (0, 1) else 0
@@ -969,10 +1065,18 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
             # release recent edges, route the stream, then re-route each victim
             # with its exact delay so no context assignment changes.
             def _try_stream():
+                # The stream pin is sampled together with the node's other
+                # operands, so it must take the same number of registered hops.
+                # Without that the node mixes sample j (stream) with sample j-k
+                # (routed edge), which is the skew dfg_quad measures.
+                others = [hs[e.id] for e in EDGES
+                          if e.head == consumer and e.id in hs]
+                tgt = max(others) if others else sdly.get(consumer)
                 for cand in group_ports(dst_inst, opnd):
                     if cand in port_used.get(dst_inst, ()): continue
                     if IW['pe_in'][str(dst_inst)].get(str(cand)) is None: continue
-                    g = iob_stream_route(dst_inst, cand, used_iob, occ)
+                    g = iob_stream_route(dst_inst, cand, used_iob, occ,
+                                         delay=tgt if ALIGN_OPNDS else None)
                     if g:
                         return cand, g
                 return None, None
@@ -1013,6 +1117,7 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
             port_used.setdefault(dst_inst, set()).add(in_p)
             port_of[e0.id] = in_p
             n, pa = got
+            sdly.setdefault(consumer, path_delay(pa))
             used_iob.add(n)
             occ.claim(pa)
             for gib, dstport, idx in pa:

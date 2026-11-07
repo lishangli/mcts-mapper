@@ -67,6 +67,15 @@ over 56 samples) where the aligned hypothesis is off by 30x (rmse 31). A
 quadratic kernel is required here: on a linear one, a latency and a skew are
 indistinguishable.
 
+**Partial fix in the tree (2026-11-07)**: the router now routes every operand of
+a node at the *same* registered-hop delay (`S2_ALIGN_OPNDS`, default on), using
+a new `route_exact` and a delay argument on `iob_stream_route` so a stream pin
+matches the node's routed operands too. Effect: `dfg_quad` goes from skew -1
+to **skew 0, rmse 0.00**, and `nn3x2`'s ramp residual drops from +2 to -1 —
+better, but not zero, so on a multi-node tree some node still fails to pad its
+shorter operand (the fallback is silent). The constant regression is intact
+(`nn3x2` [10,14] at 665 cycles vs 615 before; `chain12` [4,6] at 487).
+
 The mechanism is now clear: a node's two operands arrive over paths of different
 length (the `x+1` branch has an extra hop), and nothing in the emitter equalises
 them, so the multiply reads sample j on one input and j-1 on the other.
