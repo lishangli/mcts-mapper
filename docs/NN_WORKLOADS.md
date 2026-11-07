@@ -16,6 +16,32 @@ on 2026-11-07; the numbers below are from those runs, not from earlier sessions.
   (AG streams windows while the array computes), unlike the bridge's
   constant-stream kernels.
 
+
+## 1b. Measured convolution throughput: 19.8 ops/cycle
+
+The same conv2d_3x3 kernel, instrumented with `rdcycle` around `cgra_execute0`
+(driver copied to `tools/conv/main_conv_timed.c`):
+
+```
+CONV_PERF cycles=178
+42/42 defined outputs bit-exact with the transposed tap order (C^T)
+ops = 196 outputs x 9 MACs x 2 ops = 3528
+throughput = 3528 / 178 = 19.8 ops/cycle   (31 % of the 64 ops/cycle ceiling)
+```
+
+This is the high-performance datapoint and it explains the others: the
+convolution reuses every input across nine taps and streams 196 outputs from one
+configuration, so the launch cost and the input DMA are amortised over real
+arithmetic. The dense-layer flow (`gen_nn`, one multiply per activation per
+neuron) reaches only 3.71 ops/cycle for exactly the opposite reason — it is
+memory-bound by construction.
+
+| kernel | ops | cycles | ops/cycle | status |
+|---|---|---|---|---|
+| conv2d_3x3 (spatial, AG streaming) | 3528 | 178 | **19.8** | 42/42 bit-exact |
+| l4w5o3c3 dense DAG (256 samples, 1 readback) | 5120 | 1378 | 3.71 | ch0 bit-exact |
+| nn4x2 (256 samples) | 4096 | 2066 | 1.98 | [18, 21] bit-exact |
+
 ## 2. nn3x2 — dense layer (spatio-temporal flow)
 
 * `y_o = sum_i w[o][i] * x_i + b[o]`, 3 activations, 2 neurons,
