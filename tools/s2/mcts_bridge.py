@@ -595,6 +595,27 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
     placement = {int(nid) - 1: attr['adgNode']
                  for nid, attr in cfg['dfg_node_attrs'].items()}
 
+    # S2_CONST_ON_PE: a CONST placed on an IOB is realised as a constant stream,
+    # which costs ~5-6 cycles of load per launch (round 10). Moving it to a PE
+    # makes it a PASS node whose consumer reads it over a routed edge, so the
+    # launch stops paying an IOB per constant.
+    # Default OFF: measured a wash at k=4 (streams 8 -> 4, total 429 -> 450,
+    # because the constants now occupy PEs and the configuration grows) and a
+    # failure at k=8 (three simulator hangs). Keep it as an experiment.
+    if os.environ.get('S2_CONST_ON_PE', '0') == '1':
+        _used = {v for v in placement.values() if v is not None}
+        _free = [b for b in sorted(PE_BLKS) if b not in _used]
+        for _n, _a in list(placement.items()):
+            if op_of.get(_n) != 'CONST' or _a is None:
+                continue
+            if not (_a < 16 or _a >= 307):
+                continue
+            if not _free:
+                break
+            _b = _free.pop(0)
+            placement[_n] = _b
+            _used.add(_b)
+
     # Locality pass: the mapper optimises latency, not wirelength, and long
     # routes are what congest the interconnect (a 24-node DAG dead-ends on a
     # 9-hop edge whose destination pins are all free). Anneal the placement for
