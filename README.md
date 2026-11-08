@@ -5,34 +5,56 @@ A CGRA Mapping Algorithm Project Based on MCTS-RL
 
 | kernel | verification | cost | throughput |
 |---|---|---|---|
-| conv2d_3x3 (real convolution, AG streamed) | **42/42 outputs bit-exact** | 178–195 cycles (3 runs identical per build) | **18.1–19.8 ops/cycle (28–31 % of the 64 ops/cycle array peak)** |
-| 20-node dense DAG (`tools/s2`) | `[6, 6, 4]` bit-exact | 698 cycles @ 128 samples | 3.67 ops/cycle |
-| dense layers `nn3x2` / `nn4x2` | bit-exact | 34 / 867 cycles | 1.18–1.98 ops/cycle |
+| conv2d_3x3 (real convolution, AG streamed) | **42/42 outputs bit-exact** | 178–195 cycles | **18.1–19.8 ops/cycle (28–31 % of the 64 ops/cycle array peak)** |
+| nn4x2 (4 inputs → 2 outputs, stream sharing on) | `[18, 21]` bit-exact | 653 / 915 / 1406 cycles @ 64 / 128 / 256 samples | 1.57 / 2.24 / **2.91** |
+| nn3x2 | `[10, 14]` bit-exact | 530 cycles @ 64 samples | 1.45 |
+
+(A 20-node DAG used to be listed at 698 cycles / 3.67 ops/cycle. It no longer
+maps — 32 minutes with a 1800 s budget, sharing on and off — so that row is
+withdrawn rather than quoted.)
 
 ### Two ceilings, and why they differ
 
 ```
-dense flow (per-sample DMA, 16-op layer, nn4x2):
-   64 / 128 samples -> 1.57 / 2.24 ops/cycle
-  marginal cost    -> 4.09 cycles per sample, so 16 / 4.09 ~= 3.9 ops/cycle
-  (the older ~6 figure came from a 20-node DAG that no longer maps; retired)
+dense flow (nn4x2, stream sharing on):
+  64 / 128 / 256 samples -> 1.57 / 2.24 / 2.91 ops/cycle
+  marginal 128->256      -> 3.84 cycles/sample, of which 2.85 is store
+  -> ~1.43 cycles per OUTPUT word, ~0.21 per input word, exec = 6 cycles
+  -> result-drain bound: 8 ops/output word / 1.43 = 5.6 marginal, 2.91 average
+  (the older ~6 figure came from the retired 20-node DAG)
 
-conv2d (operands from the AG window): 18-19 ops/cycle, 42/42 bit-exact
+conv2d (operands from the AG window):
+  18 ops/output word / 1.0 cycle per output word = 18.1 ops/cycle
   3528 ops in 195 cycles, reproducible with `tools/conv/run.sh`
 ```
 
-The gap is not a hardware property. A dense layer pays DMA for every operand of
-every sample (~5-6 cycles per stream per launch, measured), so its launch cost
-grows with the graph at the same rate as its work; the convolution's nine taps
-are spatially reused and streamed by the AG, so one configuration does 1764 MACs.
+So both kernels fit one parameter, **ops per output word divided by the cycles an
+output word costs**: dense 8 / 1.43, conv 18 / 1.0. Raising the dense ratio needs
+`2 x inputs` nodes per output, which the mapper cannot place (20–24 node ceiling),
+and the only other lever — computing several outputs per operand word — needs an
+II schedule. `S2_PACK=1`, the crude version of it, fails to map (`no const IOB`),
+because folding is incompatible with the context/phase constraint. See
+`docs/AG_FED_DENSE.md`.
 
 ### Known limitations (each with its evidence)
 
 | limitation | evidence |
 |---|---|
 | one-sample operand skew on **varying** data | `dfg_quad` ramp fits `capture[i] = ref(i-L)+s` with s = -1; constant stimuli cannot see it, which is why every regression passes |
-| a rare placement emits a program that does not terminate | 1 in ~6 `dfg_quad` runs; bounded now by `S2_SIM_TIMEOUT`/`S2_SIM_RETRY`, and orphaned children are killed with `killpg` |
-| alignment (equal operand delays) fixes the skew but is unusable at layer scale | `dfg_quad` skew 0, but `nn3x2` hangs on every attempt; parked, see `docs/STATUS.md` |
+| a rare placement emits a program that does not terminate | 1 in ~6 `dfg_quad` runs; bounded by `S2_SIM_TIMEOUT`/`S2_SIM_RETRY`/`S2_CASE_TIMEOUT`, and orphaned children are killed with `killpg` |
+| alignment fixes the skew but is unusable at layer scale | `dfg_quad` skew 0 (rmse 0.00), but `nn3x2` fails on every attempt; parked, see `docs/STATUS.md` |
+| mapping capacity: 20–24 nodes is the practical ceiling | `nn4x2` (32 nodes) maps in 653–2400 s depending on the draw; `l4w5o3c3` (20 nodes) no longer maps at all; larger DFGs never emit |
+| readback: ~1 KiB per launch | two capture channels of 1024 B never emit, two of 512 B or one of 1024 B do (`S2_STORE_BYTES` is now clamped automatically) |
+
+### Next real step
+
+The performance wall is `2 x inputs` ops per output word at `1.43` cycles per word,
+and both escapes (more nodes per output, several outputs per operand word) are
+blocked by the mapper: the first by capacity, the second by the context/phase
+constraint that `S2_PACK` hits. Pick up at **a phase-aware joint scheduler**:
+assign each node's context together with its operand routes instead of
+re-routing afterwards, so one operand word can feed several outputs within II.
+`docs/ITERATION_PLAN.md` has the shape of it, `docs/AG_FED_DENSE.md` the numbers.
 
 Models, experiments and negative results are in `docs/STATUS.md`,
 `docs/EXPERIMENTS.md`, `docs/EXECUTION_MODEL.md`, `docs/NN_WORKLOADS.md`,

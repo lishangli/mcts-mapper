@@ -83,3 +83,33 @@ without its provenance.
 * retractions stay in the docs with their reason;
 * never quote a figure from a run whose values were wrong, even as a "rough" number;
 * one hypothesis per round - bundling two changes makes the result unattributable.
+
+## 7. What the II scheduler must do (evidence-based, 2026-11-07)
+
+Every escape from the dense ceiling has been tried and the failures are
+informative, so the design is constrained rather than speculative:
+
+* **contexts and routing must be assigned together.** `S2_PACK=1` folds
+  independent ops onto one PE's two slots after routing, and it never maps:
+  0/1 after 1862 s over five attempts, last reason `no const IOB`, because
+  `S2_PACK` also turns `S2_NO_PHASE` off and a stream IOB cannot hit an exact
+  context residue. A fold decided *before* routing would pick the residue and
+  the path together.
+* **operand delays must be equalised per node, cheaply.** The one-sample skew is
+  real (`dfg_quad`: s = -1, rmse 0.38) and equal-delay routing removes it
+  (rmse 0.00), but the implementation costs 30+ minutes of mapping at 12 nodes
+  and deadlocks at 20. The scheduler should therefore *place for equal depth*
+  (e.g. prefer producers at equal Manhattan distance) instead of repairing delay
+  after the fact.
+* **II is a property of the schedule, not a flag.** Folding two ops onto one PE
+  only helps if both operand sets are live in different contexts; a phase-aware
+  scheduler can state that as a constraint (node n uses context c mod 2) and a
+  router that knows c can satisfy it.
+* **the readback budget is fixed at ~1 KiB per launch** (two 1024 B channels fail,
+  two 512 B succeed), so any schedule with O outputs can return at most 256/O
+  samples; the scheduler must treat that as a resource alongside PEs and wires.
+* **the payoff is bounded and known**: 8 ops per output word today, 1.43 cycles
+  per word; reaching the convolution's 18 needs either 2x9 nodes per output
+  (blocked by the 20-24 node capacity) or 9 outputs per operand word (blocked by
+  the phase constraint). The II scheduler is the only route to the second.
+
