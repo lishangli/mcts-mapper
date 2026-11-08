@@ -73,6 +73,10 @@ memory-bound by construction.
 | nn3x2 | 12 | 34 | 0.35 | 0.55 % |
 | nn4x2 | 16 | 143 | 0.11 | 0.17 % |
 
+With one IOB per input value (stream sharing, 2026-11-07) `nn4x2` drops from 889
+to **653 cycles** for the same `[18, 21]`, i.e. 16 ops / 653 = 0.0245 ops/cycle
+end-to-end on a 64-sample window.
+
 Wider is **worse**, and the phase split says why: `load` went 25 → 98 cycles
 while `exec` stayed at 5. The kernel pays for its configuration stream and input
 DMA in proportion to the graph, and the array only runs for the few cycles the
