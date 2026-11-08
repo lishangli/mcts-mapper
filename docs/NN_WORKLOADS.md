@@ -170,6 +170,9 @@ sample**, so 16 ops / 4.09 gives an asymptote of **~3.9 ops/cycle** for this
 point 57 %, i.e. this kernel is still launch-dominated at both sizes, which is
 exactly what the per-sample DMA model predicts.
 
+256 samples did not complete: the case hit its 1800 s budget without emitting
+(1862 s wall clock). So for this kernel the curve stops at 128 too.
+
 ### 3.5 The 20-node DAG at batch 128 (best verified throughput)
 
 `dfg_dag_l4w5o3c3` (20 compute nodes, 3 capture channels) with a 128-sample
