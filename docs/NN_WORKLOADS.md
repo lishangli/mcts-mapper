@@ -118,6 +118,34 @@ Earlier figures (0.52 cycles/sample, 31 ops/cycle) came from runs whose values
 were wrong and are withdrawn.
 
 
+### 3.4b Amortisation curve and the flow's ceiling
+
+The same 20-operation DAG at four batch sizes (1 readback channel except where
+noted):
+
+| samples | ops | total cycles | ops/cycle |
+|---|---|---|---|
+| 128 (3 caps) | 2560 | 698 | 3.67 |
+| 256 | 5120 | 1378 | 3.71 |
+| 512 | 10240 | 2226 | **4.60** |
+| 1024 | 20480 | does not complete | — |
+
+The marginal cost between 256 and 512 is **3.31 cycles/sample**, i.e. moving a
+sample through this kernel costs ~3.3 cycles no matter how long the batch is.
+With 20 operations per sample that caps the kernel at
+
+```
+20 ops / 3.31 cycles ~= 6.0 ops/cycle   (asymptote, ~9 % of the 64 ops/cycle ceiling)
+```
+
+and the measured 4.60 at 512 samples is already 77 % of that asymptote. So this
+flow is **saturated at ~6 ops/cycle**, and the reason is structural: each sample
+arrives by DMA (two operand streams, one result), while conv2d's operand window
+comes from the AG, which is why it sustains 18-19.
+
+1024 samples does not complete: the emitted program does not terminate within
+300 s, on three consecutive attempts, twice. That is the practical limit.
+
 ### 3.5 The 20-node DAG at batch 128 (best verified throughput)
 
 `dfg_dag_l4w5o3c3` (20 compute nodes, 3 capture channels) with a 128-sample
