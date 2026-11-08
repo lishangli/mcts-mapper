@@ -432,7 +432,7 @@ def route_exact(src_inst, dst_inst, port, target, occ=(), c0=None):
             q.append((node, nd, pa + [(gib, dstport, idx)]))
     return None
 
-def iob_stream_route(dst_inst, port, avoid=(), occ=(), delay=None):
+def iob_stream_route(dst_inst, port, avoid=(), occ=(), delay=None, only=None):
     """route IOB(out) -> PE in: BFS upstream from PE in pin to any unused IOB out pin.
 
     delay: required registered-hop delay, or None for any. A stream pin is
@@ -446,12 +446,15 @@ def iob_stream_route(dst_inst, port, avoid=(), occ=(), delay=None):
     if tgt is None: return None
     terms = {}
     for n in range(32):
+        if only is not None and n != only:
+            continue          # fan-out: every consumer reads THIS bank
         for o in IW['iob_out'].get(str(n), []):
             terms[tuple(o)] = n
     q = deque([(tuple(tgt), 0, [])]); seen = {(tuple(tgt), 0)}
     while q:
         (g, p), d, pa = q.popleft()
-        if ((g, p) in terms and pa and terms[(g, p)] not in avoid
+        if ((g, p) in terms and pa
+                and (only is not None or terms[(g, p)] not in avoid)
                 and (delay is None or d == delay)):
             return terms[(g, p)], pa
         if pa and occ.strict and (g, p) in occ: continue
@@ -1118,6 +1121,8 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
         din_meta = []
         used_iob = set()
         sdly = {}   # consumer -> stream path delay, so sibling streams agree
+        iob_of = {}  # stream node -> IOB number, so all its consumers share one
+        si_of = {}   # stream node -> index of its single din_meta entry
         for si, (cnid, val, consumer, operand) in enumerate(iob_streams):
             e0 = next(e for e in EDGES if e.tail == cnid and e.head == consumer)
             opnd = operand if operand in (0, 1) else 0
@@ -1138,7 +1143,8 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                     if cand in port_used.get(dst_inst, ()): continue
                     if IW['pe_in'][str(dst_inst)].get(str(cand)) is None: continue
                     g = iob_stream_route(dst_inst, cand, used_iob, occ,
-                                         delay=tgt if ALIGN_OPNDS else None)
+                                         delay=tgt if ALIGN_OPNDS else None,
+                                         only=iob_of.get(cnid))
                     if g:
                         return cand, g
                 return None, None
@@ -1180,15 +1186,24 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
             port_of[e0.id] = in_p
             n, pa = got
             sdly.setdefault(consumer, path_delay(pa))
-            used_iob.add(n)
             occ.claim(pa)
+            # One IOB per stream VALUE, fanned out to every consumer pin: the
+            # DMA cost is per stream per launch (~5-6 cycles), so paying it once
+            # per consumer is what kept the dense ceiling at ~6 ops/cycle.
+            if cnid in si_of:
+                si_eff = si_of[cnid]
+            else:
+                si_eff = len(din_meta)
+                si_of[cnid] = si_eff
+                iob_of[cnid] = n
+                used_iob.add(n)
+                din_meta.append((si_eff, n, val))
             for gib, dstport, idx in pa:
                 if idx is not None:
                     for slot in (0, 1):
                         set_gib_bits(slot, gib, dstport, idx,
-                                     'stream%d(iob%d->%d)' % (si, n, consumer))
-            din_meta.append((si, n, val))
-            print('const val=%d -> iobs_%d' % (val, n))
+                                     'stream%d(iob%d->%d)' % (si_eff, n, consumer))
+            print('const val=%d -> iobs_%d (%d consumer(s))' % (val, n, len(iob_of)))
         # S2_PACK=1: fold independent compute ops onto the first op's PE, one slot
         # each (time multiplexing). Only legal when the folded op's operands all
         # come from IOB streams (no pre-computed inter-PE route to invalidate).
