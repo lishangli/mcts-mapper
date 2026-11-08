@@ -154,6 +154,22 @@ comes from the AG, which is why it sustains 18-19.
 1024 samples does not complete: the emitted program does not terminate within
 300 s, on three consecutive attempts, twice. That is the practical limit.
 
+### 3.4c Amortisation curve on a kernel that still maps (nn4x2, 2026-11-07)
+
+16 operations per sample (4 inputs x 2 outputs x 2), stream sharing on, both
+capture channels read back:
+
+| samples | ops | total cycles | ops/cycle |
+|---|---|---|---|
+| 64 | 1024 | 653 | 1.57 |
+| 128 | 2048 | 915 | **2.24** |
+
+Marginal cost between the two points is (915 - 653) / 64 = **4.09 cycles per
+sample**, so 16 ops / 4.09 gives an asymptote of **~3.9 ops/cycle** for this
+16-op layer. The 64-sample point is 40 % of that asymptote and the 128-sample
+point 57 %, i.e. this kernel is still launch-dominated at both sizes, which is
+exactly what the per-sample DMA model predicts.
+
 ### 3.5 The 20-node DAG at batch 128 (best verified throughput)
 
 `dfg_dag_l4w5o3c3` (20 compute nodes, 3 capture channels) with a 128-sample

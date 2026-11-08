@@ -12,10 +12,10 @@ A CGRA Mapping Algorithm Project Based on MCTS-RL
 ### Two ceilings, and why they differ
 
 ```
-dense flow (per-sample DMA):   saturates at ~6 ops/cycle
-  128/256/512 samples -> 3.67 / 3.71 / 4.60 ops/cycle
-  marginal cost        -> 3.31 cycles per sample, so 20 ops / 3.31 ~= 6.0
-  1024 samples         -> the emitted program does not terminate (limit of this flow)
+dense flow (per-sample DMA, 16-op layer, nn4x2):
+   64 / 128 samples -> 1.57 / 2.24 ops/cycle
+  marginal cost    -> 4.09 cycles per sample, so 16 / 4.09 ~= 3.9 ops/cycle
+  (the older ~6 figure came from a 20-node DAG that no longer maps; retired)
 
 conv2d (operands from the AG window): 18-19 ops/cycle, 42/42 bit-exact
   3528 ops in 195 cycles, reproducible with `tools/conv/run.sh`
