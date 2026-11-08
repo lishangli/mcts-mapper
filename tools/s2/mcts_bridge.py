@@ -113,6 +113,10 @@ ALIGN_OPNDS = os.environ.get('S2_ALIGN_OPNDS', '0') == '1'
 # still maps and still passes the constant-stimulus regression, so this list is
 # the only visible record of a correctness hole.
 ALIGN_FAILS = []
+# S2_STREAM_SHARE=1: one IOB per input value, fanned out to every consumer pin.
+# Off = the old behaviour (one IOB per consumer), useful for A/B comparisons of
+# both the kernel cost and the mapping time.
+SHARE_STREAMS = os.environ.get('S2_STREAM_SHARE', '1') == '1'
 
 class Occ:
     """Routing occupancy, keyed by (gib, port).
@@ -1144,7 +1148,7 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                     if IW['pe_in'][str(dst_inst)].get(str(cand)) is None: continue
                     g = iob_stream_route(dst_inst, cand, used_iob, occ,
                                          delay=tgt if ALIGN_OPNDS else None,
-                                         only=iob_of.get(cnid))
+                                         only=iob_of.get(cnid) if SHARE_STREAMS else None)
                     if g:
                         return cand, g
                 return None, None
@@ -1190,7 +1194,7 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
             # One IOB per stream VALUE, fanned out to every consumer pin: the
             # DMA cost is per stream per launch (~5-6 cycles), so paying it once
             # per consumer is what kept the dense ceiling at ~6 ops/cycle.
-            if cnid in si_of:
+            if SHARE_STREAMS and cnid in si_of:
                 si_eff = si_of[cnid]
             else:
                 si_eff = len(din_meta)
