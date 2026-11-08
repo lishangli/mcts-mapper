@@ -28,6 +28,13 @@ later session) does not have to reconstruct it from the experiment logs.
 1024 samples is out of reach: the emitted program does not terminate (three
 300 s timeouts, twice). That is where this flow stops.
 
+**Status of those numbers after stream sharing (2026-11-07)**: the small kernels
+improved (nn3x2 615 -> 530, nn4x2 889 -> 653, chain12 487 -> 448, dfg_big
+506 -> 390, dfg_multi 358 -> 318, all bit-exact), but `dfg_dag_l4w5o3c3` has not
+mapped since the change: 28 minutes with a 1800 s budget, then 17 minutes with a
+bounded stream search. Its 698-cycle / 3.67 ops-per-cycle figure therefore
+predates sharing and is **unverified**, not refuted.
+
 ## Open, with the next concrete action
 
 | Open item | Next action |
