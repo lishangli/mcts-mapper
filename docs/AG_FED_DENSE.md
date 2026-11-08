@@ -79,10 +79,16 @@ Run `nn4x2` with `S2_PACK=1`:
 1. does it still map and stay bit-exact `[18, 21]`?
 2. do the cycles fall, or does folding only trade PEs for latency?
 
-If cycles fall while the values hold, time multiplexing is real and the next step
-is a proper II schedule; if they do not, then ops-per-output-word is capped by
-the drain rate and the current ~3 ops/cycle is the flow's honest ceiling — a
-negative result that is worth recording as such.
+**Result (measured, round 23): it does not map.** `nn4x2` with `S2_PACK=1`
+gave 0/1 after 1862 s over five remap attempts, last reason `no const IOB`.
+`S2_PACK` also disables `S2_NO_PHASE`, so every operand must land on an exact
+context residue, and a stream IOB cannot satisfy that here. Folding after the
+fact is therefore incompatible with the context constraint in the current
+router — an II schedule would have to assign contexts *together with* routing,
+which is a scheduler rewrite, not a flag.
+
+So ops-per-output-word is capped by the drain rate in this flow, and ~3 ops/cycle
+for dense is its honest ceiling.
 
 ## 7. What would have to be true to close the gap
 
