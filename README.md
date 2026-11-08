@@ -20,7 +20,8 @@ dense flow (nn4x2, stream sharing on):
   64 / 128 / 256 samples -> 1.57 / 2.24 / 2.91 ops/cycle
   marginal 128->256      -> 3.84 cycles/sample, of which 2.85 is store
   -> ~1.43 cycles per OUTPUT word, ~0.21 per input word, exec = 6 cycles
-  -> result-drain bound: 8 ops/output word / 1.43 = 5.6 marginal, 2.91 average
+  -> model: cycles = 0.21*inputs + 1.43*outputs, ops = 2*inputs*outputs
+  -> nn4x2 predicted marginal 4.3, measured 4.17; nn3x2 3.44 vs 3.77
   (the older ~6 figure came from the retired 20-node DAG)
 
 conv2d (operands from the AG window):
@@ -28,8 +29,10 @@ conv2d (operands from the AG window):
   3528 ops in 195 cycles, reproducible with `tools/conv/run.sh`
 ```
 
-So both kernels fit one parameter, **ops per output word divided by the cycles an
-output word costs**: dense 8 / 1.43, conv 18 / 1.0. Raising the dense ratio needs
+So both kernels fit one parameter, **ops per output word against the cost of a
+word**: dense 8 ops at 1.43 cycles (plus 0.21 per input word), conv 18 ops at
+1.0 cycle. The model reproduces both dense kernels' marginal within 10 %. Raising
+the dense ratio needs
 `2 x inputs` nodes per output, which the mapper cannot place (20–24 node ceiling),
 and the only other lever — computing several outputs per operand word — needs an
 II schedule. `S2_PACK=1`, the crude version of it, fails to map (`no const IOB`),

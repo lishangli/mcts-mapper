@@ -32,27 +32,36 @@ and the array itself (exec) takes 6 cycles for the whole kernel.
 `conv2d_3x3`: 195 cycles, 196 outputs, 1764 MACs, 3528 ops (`EXECUTION_MODEL.md`
 §4b) — about **1.0 cycle per output word** and **18 ops per output word**.
 
-## 3. One parameter: ops per output word, and how fast a word drains
+## 3. The model, and its check on two kernels
 
-    ops/cycle = (ops per output word) / (cycles per output word)
+Per sample a layer with I inputs and O outputs pays
 
-| kernel | ops per output word | cycles per output word | predicted | measured |
-|---|---|---|---|---|
-| nn4x2 @256 | 16 / 2 = 8 | 1.43 | 5.6 | **2.91** |
-| conv2d_3x3 | 18 / 1 = 18 | 1.0 | 18 | **18.1** |
+    cycles = I x c_load + O x c_store        c_load = 0.21, c_store = 1.43
+    ops    = 2 x I x O
+    ops/cycle = 2 x I x O / (0.21 I + 1.43 O)
 
-The conv row is exact. The dense row is off by ~2x, and the reason is the fixed
-cost that the marginal does not include: at 256 samples the kernel still pays
-config download, the window drain (~250 cycles per `EXECUTION_MODEL.md`) and the
-launch itself, so its measured average is 2.91 against a 5.6 marginal.
+| kernel | I | O | predicted marginal | measured marginal | measured average @256 |
+|---|---|---|---|---|---|
+| nn4x2 | 4 | 2 | 4.3 | **4.17** (1406-915)/128 | 2.91 |
+| nn3x2 | 3 | 2 | 3.44 | **3.77** (1141-530)/192 | **2.69** |
 
-Two independent levers follow, and only two:
+Two kernels, one free parameter pair fitted on nn4x2 only, and the second kernel
+lands within 10 %. The averages sit below the marginals because the launch still
+pays config download and the ~250-cycle window drain
+(`EXECUTION_MODEL.md`): at 256 samples nn4x2 is at 68 % of its marginal and
+nn3x2 at 71 %.
 
-1. **raise ops per output word** (dense: 8 today). For a layer with I inputs and
-   O outputs it is `2 x I x O / O = 2 x I`, i.e. **it depends only on the number
-   of inputs per output**, exactly like the conv's `2 x taps`. nn4x2 has I = 4;
-   the conv has 9 taps.
-2. **drain output words faster** (dense: 1.43 cycles/word vs conv's 1.0).
+The convolution does not fit this formula because its operands are **spatial**
+(a 9-tap window arrives in one cycle, so c_load is amortised across taps):
+
+    ops/cycle = 18 ops per output word / 1.0 cycles per word = 18.1   (measured)
+
+So the dense/inverse comparison is:
+
+1. **ops per output word** is `2 x I` for dense (16/2 = 8 for nn4x2, 12/2 = 6
+   for nn3x2) and `2 x taps` for conv (18). Equalising them means I = 9.
+2. **drain rate**: 1.43 cycles per output word for dense, 1.0 for conv — a 1.4x
+   difference, worth much less than the 2-3x that (1) can give.
 
 ## 4. Why I cannot simply be raised today
 
