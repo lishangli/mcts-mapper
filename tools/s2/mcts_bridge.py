@@ -1364,8 +1364,16 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                     % (si, off, n * 4096 + off, min(256, CAP_CYCLES * 4 - off))
                     for off in range(0, CAP_CYCLES * 4, 256))
             for si, n, val in din_meta)
+        # Store budget is shared: two channels of 1024 B never emit (measured),
+        # while two of 512 B or one of 1024 B do, so the runtime can move about
+        # 1 KiB per kernel launch. Clamp rather than fail to map.
+        per_cap = max(256, 1024 // max(1, len(caps)))
+        st_bytes = min(STORE_BYTES, per_cap)
+        if st_bytes < STORE_BYTES:
+            print('store: clamped %d -> %d bytes/channel for %d channel(s)'
+                  % (STORE_BYTES, st_bytes, len(caps)))
         st = ''.join('\tstore(dout_addr[%d], 0x%x, %d, 0, 0);\n'
-                     % (i, s * 4096, STORE_BYTES)
+                     % (i, s * 4096, st_bytes)
                      for i, (s, _) in enumerate(caps))
         # s2_rdcycle brackets each phase so the run log carries the hardware cost
         # of one kernel (docs/EXECUTION_MODEL.md): load = config+input DMA,
