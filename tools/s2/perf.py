@@ -11,6 +11,7 @@ usage: python perf.py [--only SUBSTR] [--repeat N] [--json OUT]
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 import time
@@ -88,12 +89,24 @@ def main():
             tmo = int(os.environ.get('S2_SIM_TIMEOUT', '300'))
             p = None
             for t_ in range(tries):
+                # start_new_session + killpg: subprocess.run(timeout=) kills only
+                # the shell, so the python child (mcts_bridge, or verilator) keeps
+                # running. Two such orphans were burning a core each for over two
+                # hours and every later run looked "hung" because of them.
+                proc = subprocess.Popen(
+                    [os.path.join(S2, 'run_dfg.sh'), dfg, tag],
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                    cwd=S2, start_new_session=True)
                 try:
-                    p = subprocess.run([os.path.join(S2, 'run_dfg.sh'), dfg, tag],
-                                       capture_output=True, text=True, cwd=S2,
-                                       timeout=tmo)
+                    out_, err_ = proc.communicate(timeout=tmo)
+                    p = subprocess.CompletedProcess(proc.args, proc.returncode, out_, err_)
                     break
                 except subprocess.TimeoutExpired:
+                    try:
+                        os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                    except OSError:
+                        proc.kill()
+                    proc.communicate()
                     print('%-28s   -> simulator produced no result in %ds, remapping (%d/%d)'
                           % (dfg, tmo, t_ + 1, tries))
                     for f in (os.path.join(OUT, tag + '_run.log'),):
