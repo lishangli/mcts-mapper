@@ -88,7 +88,15 @@ def main():
             tries = int(os.environ.get('S2_SIM_RETRY', '3'))
             tmo = int(os.environ.get('S2_SIM_TIMEOUT', '300'))
             p = None
+            # Whole-case wall-clock cap: S2_MAP_TIMEOUT * S2_SIM_RETRY can add up
+            # to hours, which is how a single round gets eaten by one DFG.
+            case_t0 = time.time()
+            case_tmo = int(os.environ.get('S2_CASE_TIMEOUT', '1800'))
             for t_ in range(tries):
+                if time.time() - case_t0 > case_tmo:
+                    print('%-28s   -> case budget %ds exhausted, giving up'
+                          % (dfg, case_tmo))
+                    break
                 # start_new_session + killpg: subprocess.run(timeout=) kills only
                 # the shell, so the python child (mcts_bridge, or verilator) keeps
                 # running. Two such orphans were burning a core each for over two

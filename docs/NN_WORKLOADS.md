@@ -127,6 +127,10 @@ were wrong and are withdrawn.
 The same 20-operation DAG at four batch sizes (1 readback channel except where
 noted):
 
+> **Retired 2026-11-07**: the 20-node `l4w5o3c3` case below no longer maps
+> (32 minutes with a 1800 s budget, sharing on and off), so these rows are kept
+> only as history. The current throughput evidence is §3.4b's small kernels.
+
 | samples | ops | total cycles | ops/cycle |
 |---|---|---|---|
 | 128 (3 caps) | 2560 | 698 | 3.67 |
