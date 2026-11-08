@@ -170,8 +170,10 @@ sample**, so 16 ops / 4.09 gives an asymptote of **~3.9 ops/cycle** for this
 point 57 %, i.e. this kernel is still launch-dominated at both sizes, which is
 exactly what the per-sample DMA model predicts.
 
-256 samples did not complete: the case hit its 1800 s budget without emitting
-(1862 s wall clock). So for this kernel the curve stops at 128 too.
+256 samples with **two** capture channels did not complete (1800 s budget, then
+1862 s wall clock). With **one** channel it maps and runs: 1376 cycles, channel 0
+correct, 4096 ops / 1376 = 2.98 ops/cycle. So the wall is the readback width, not
+the batch: two channels of 1024 B do not fit where one does.
 
 ### 3.5 The 20-node DAG at batch 128 (best verified throughput)
 
