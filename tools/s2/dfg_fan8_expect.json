@@ -1,0 +1,9 @@
+{
+ "name": "fan8",
+ "expect": [
+  108
+ ],
+ "ops_per_sample": 15,
+ "compute_nodes": 15,
+ "note": "y = x * sum(1..k) with x = 3"
+}

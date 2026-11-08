@@ -1,0 +1,175 @@
+{
+ "name": "fan4",
+ "directed": true,
+ "objects": [
+  {
+   "opcode": "INPUT",
+   "name": "CONST1",
+   "ref_name": "%const1",
+   "pattern": "4, 91",
+   "size": "256",
+   "offset": "0, 0",
+   "_gvid": 0
+  },
+  {
+   "opcode": "CONST",
+   "name": "%c1",
+   "value": "1",
+   "_gvid": 1
+  },
+  {
+   "opcode": "MUL",
+   "name": "M0",
+   "_gvid": 2
+  },
+  {
+   "opcode": "CONST",
+   "name": "%c2",
+   "value": "2",
+   "_gvid": 3
+  },
+  {
+   "opcode": "MUL",
+   "name": "M1",
+   "_gvid": 4
+  },
+  {
+   "opcode": "CONST",
+   "name": "%c3",
+   "value": "3",
+   "_gvid": 5
+  },
+  {
+   "opcode": "MUL",
+   "name": "M2",
+   "_gvid": 6
+  },
+  {
+   "opcode": "CONST",
+   "name": "%c4",
+   "value": "4",
+   "_gvid": 7
+  },
+  {
+   "opcode": "MUL",
+   "name": "M3",
+   "_gvid": 8
+  },
+  {
+   "opcode": "ADD",
+   "name": "S9",
+   "_gvid": 9
+  },
+  {
+   "opcode": "ADD",
+   "name": "S10",
+   "_gvid": 10
+  },
+  {
+   "opcode": "ADD",
+   "name": "S11",
+   "_gvid": 11
+  },
+  {
+   "opcode": "OUTPUT",
+   "name": "OUT",
+   "ref_name": "%out0",
+   "pattern": "4, 91",
+   "size": "256",
+   "offset": "0, 0",
+   "_gvid": 12
+  }
+ ],
+ "edges": [
+  {
+   "_gvid": 0,
+   "tail": 0,
+   "head": 2,
+   "operand": 0
+  },
+  {
+   "_gvid": 1,
+   "tail": 1,
+   "head": 2,
+   "operand": 1
+  },
+  {
+   "_gvid": 2,
+   "tail": 0,
+   "head": 4,
+   "operand": 0
+  },
+  {
+   "_gvid": 3,
+   "tail": 3,
+   "head": 4,
+   "operand": 1
+  },
+  {
+   "_gvid": 4,
+   "tail": 0,
+   "head": 6,
+   "operand": 0
+  },
+  {
+   "_gvid": 5,
+   "tail": 5,
+   "head": 6,
+   "operand": 1
+  },
+  {
+   "_gvid": 6,
+   "tail": 0,
+   "head": 8,
+   "operand": 0
+  },
+  {
+   "_gvid": 7,
+   "tail": 7,
+   "head": 8,
+   "operand": 1
+  },
+  {
+   "_gvid": 8,
+   "tail": 2,
+   "head": 9,
+   "operand": 0
+  },
+  {
+   "_gvid": 9,
+   "tail": 4,
+   "head": 9,
+   "operand": 1
+  },
+  {
+   "_gvid": 10,
+   "tail": 9,
+   "head": 10,
+   "operand": 0
+  },
+  {
+   "_gvid": 11,
+   "tail": 6,
+   "head": 10,
+   "operand": 1
+  },
+  {
+   "_gvid": 12,
+   "tail": 10,
+   "head": 11,
+   "operand": 0
+  },
+  {
+   "_gvid": 13,
+   "tail": 8,
+   "head": 11,
+   "operand": 1
+  },
+  {
+   "_gvid": 14,
+   "tail": 11,
+   "head": 12,
+   "operand": 0
+  }
+ ]
+}
