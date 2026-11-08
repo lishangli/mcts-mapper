@@ -97,18 +97,38 @@ def main():
                     [os.path.join(S2, 'run_dfg.sh'), dfg, tag],
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                     cwd=S2, start_new_session=True)
+                # Two separate budgets. Mapping legitimately takes minutes on
+                # larger graphs, so the simulator budget must start only once the
+                # ELF exists; otherwise the guard kills healthy mappings (that is
+                # what happened to dfg_fan8).
+                map_tmo = int(os.environ.get('S2_MAP_TIMEOUT', '900'))
+                elf = os.path.join(OUT, tag + '.riscv')
+                t0_, t_elf = time.time(), None
+                while proc.poll() is None:
+                    now = time.time()
+                    if t_elf is None and os.path.exists(elf):
+                        t_elf = now
+                    if t_elf is None and now - t0_ > map_tmo:
+                        break
+                    if t_elf is not None and now - t_elf > tmo:
+                        break
+                    time.sleep(2)
+                over = 'mapping' if t_elf is None else 'simulator'
                 try:
-                    out_, err_ = proc.communicate(timeout=tmo)
+                    out_, err_ = proc.communicate(timeout=30)
                     p = subprocess.CompletedProcess(proc.args, proc.returncode, out_, err_)
-                    break
+                    if proc.returncode == 0:
+                        break
                 except subprocess.TimeoutExpired:
+                    pass
+                if True:
                     try:
                         os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
                     except OSError:
                         proc.kill()
                     proc.communicate()
-                    print('%-28s   -> simulator produced no result in %ds, remapping (%d/%d)'
-                          % (dfg, tmo, t_ + 1, tries))
+                    print('%-28s   -> %s produced no result in time, remapping (%d/%d)'
+                          % (dfg, over, t_ + 1, tries))
                     for f in (os.path.join(OUT, tag + '_run.log'),):
                         if os.path.exists(f):
                             os.remove(f)
