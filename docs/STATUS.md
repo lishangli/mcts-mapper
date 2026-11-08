@@ -18,6 +18,16 @@ later session) does not have to reconstruct it from the experiment logs.
 | Mapping capacity moved 12 → 20 nodes | `stress_report.md`, MRRG plan |
 | The suite still passes after the near-IOB and rip-up changes | **all 12 cases re-run individually on 2026-11-07 and PASS**: chain_dfg 6/353, dfg_chain5 9/424, dfg_branch 3/347, dfg_const 8/261, dfg_mixed 13, dfg_scale 11, dfg_multi [8,-2]/358, dfg_big 31/506, chain12 [4,6]/518, nn3x2 [10,14]/615, nn4x2 [18,21]/889, l4w5o3c3 [6,6,4]/698 (value/cycles) |
 
+## Two ceilings (2026-11-07, consolidated)
+
+| flow | measured | ceiling | why |
+|---|---|---|---|
+| dense DAG, per-sample DMA | 3.67 / 3.71 / 4.60 ops/cycle at 128 / 256 / 512 samples | **~6 ops/cycle** (marginal 3.31 cycles/sample x 20 ops) | every operand of every sample is DMA'd; ~5-6 cycles per stream per launch, so launch cost grows with the graph |
+| conv2d_3x3, AG-streamed | **18.1-19.8 ops/cycle**, 42/42 bit-exact, 195 cycles via `tools/conv/run.sh` | array-limited (31 % of 64) | nine taps are spatially reused, one configuration does 1764 MACs |
+
+1024 samples is out of reach: the emitted program does not terminate (three
+300 s timeouts, twice). That is where this flow stops.
+
 ## Open, with the next concrete action
 
 | Open item | Next action |

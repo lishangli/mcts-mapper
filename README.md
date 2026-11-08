@@ -9,12 +9,34 @@ A CGRA Mapping Algorithm Project Based on MCTS-RL
 | 20-node dense DAG (`tools/s2`) | `[6, 6, 4]` bit-exact | 698 cycles @ 128 samples | 3.67 ops/cycle |
 | dense layers `nn3x2` / `nn4x2` | bit-exact | 34 / 867 cycles | 1.18–1.98 ops/cycle |
 
-The two orders of magnitude between the rows are not a hardware property: the
-convolution reuses every input across nine taps, so one configuration does 1764
-MACs, while the generated dense layers do one multiply per activation and are
-memory-bound by construction. Models, experiments and negative results are in
-`docs/EXECUTION_MODEL.md`, `docs/NN_WORKLOADS.md`, `docs/MRRG_PLAN.md` and
-`docs/RELATED_WORK.md`.
+### Two ceilings, and why they differ
+
+```
+dense flow (per-sample DMA):   saturates at ~6 ops/cycle
+  128/256/512 samples -> 3.67 / 3.71 / 4.60 ops/cycle
+  marginal cost        -> 3.31 cycles per sample, so 20 ops / 3.31 ~= 6.0
+  1024 samples         -> the emitted program does not terminate (limit of this flow)
+
+conv2d (operands from the AG window): 18-19 ops/cycle, 42/42 bit-exact
+  3528 ops in 195 cycles, reproducible with `tools/conv/run.sh`
+```
+
+The gap is not a hardware property. A dense layer pays DMA for every operand of
+every sample (~5-6 cycles per stream per launch, measured), so its launch cost
+grows with the graph at the same rate as its work; the convolution's nine taps
+are spatially reused and streamed by the AG, so one configuration does 1764 MACs.
+
+### Known limitations (each with its evidence)
+
+| limitation | evidence |
+|---|---|
+| one-sample operand skew on **varying** data | `dfg_quad` ramp fits `capture[i] = ref(i-L)+s` with s = -1; constant stimuli cannot see it, which is why every regression passes |
+| a rare placement emits a program that does not terminate | 1 in ~6 `dfg_quad` runs; bounded now by `S2_SIM_TIMEOUT`/`S2_SIM_RETRY`, and orphaned children are killed with `killpg` |
+| alignment (equal operand delays) fixes the skew but is unusable at layer scale | `dfg_quad` skew 0, but `nn3x2` hangs on every attempt; parked, see `docs/STATUS.md` |
+
+Models, experiments and negative results are in `docs/STATUS.md`,
+`docs/EXPERIMENTS.md`, `docs/EXECUTION_MODEL.md`, `docs/NN_WORKLOADS.md`,
+`docs/MRRG_PLAN.md` and `docs/RELATED_WORK.md`.
 
 ## 🚀 Features
 ✨ Feature 1: Supports front-end compiler CGRA-Compiler
