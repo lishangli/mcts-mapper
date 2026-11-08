@@ -455,7 +455,12 @@ def iob_stream_route(dst_inst, port, avoid=(), occ=(), delay=None, only=None):
         for o in IW['iob_out'].get(str(n), []):
             terms[tuple(o)] = n
     q = deque([(tuple(tgt), 0, [])]); seen = {(tuple(tgt), 0)}
-    while q:
+    # Bounded search: with only=N (fan-out) an unreachable bank makes the BFS
+    # explore the whole (wire, delay) space for every consumer, which is what
+    # made the 20-node case take over 28 minutes to map.
+    budget = 20000
+    while q and budget > 0:
+        budget -= 1
         (g, p), d, pa = q.popleft()
         if ((g, p) in terms and pa
                 and (only is not None or terms[(g, p)] not in avoid)
