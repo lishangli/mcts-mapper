@@ -36,7 +36,8 @@ are spatially reused and streamed by the AG, so one configuration does 1764 MACs
 
 Models, experiments and negative results are in `docs/STATUS.md`,
 `docs/EXPERIMENTS.md`, `docs/EXECUTION_MODEL.md`, `docs/NN_WORKLOADS.md`,
-`docs/MRRG_PLAN.md` and `docs/RELATED_WORK.md`.
+`docs/AG_FED_DENSE.md` (why dense stops at ~3 ops/cycle), `docs/MRRG_PLAN.md`
+and `docs/RELATED_WORK.md`.
 
 ## 🚀 Features
 ✨ Feature 1: Supports front-end compiler CGRA-Compiler
