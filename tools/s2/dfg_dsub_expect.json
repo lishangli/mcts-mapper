@@ -1,0 +1,7 @@
+{
+ "name": "dsub",
+ "expect": [
+  1
+ ],
+ "note": "y = (x+1) - x must be 1 for every sample; a one-sample lag of the ADD gives 0 on a ramp"
+}
