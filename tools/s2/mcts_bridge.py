@@ -1133,8 +1133,23 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                   [(e.tail, hs.get(e.id), 'want=%d' % ((c0 - ctx_of[e.tail]) % 2))
                    for e in ins])
         # routes must be alive in BOTH slots (value wave propagates via regs)
+        def _srcname(gib, port, idx):
+            if idx is None: return '-'
+            import sched as _s
+            blk = INST2BLK.get(gib, gib)
+            try:
+                return _s.GIBS[str(blk)]['mux'][port]['srcs'][idx]
+            except Exception:
+                return '?'
         for eid, path in route_of.items():
             e = next(x for x in EDGES if x.id == eid)
+            if os.environ.get('S2_DUMP_PATHS') == '1':
+                # a path is destination-first: print the source name each hop
+                # selects, so an operand that ends up on the wrong wire is visible
+                print('path edge%d(%d->%d) hs=%d: %s' % (
+                    eid, e.tail, e.head, path_delay(path),
+                    ' -> '.join('%d.%s[idx=%s=%s]' % (g, dp, ix, _srcname(g, dp, ix))
+                                for g, dp, ix in path)))
             for slot in (0, 1): emit_route(path, slot, 'edge%d(%d->%d)' % (eid, e.tail, e.head))
         # INPUT streams: IOB out -> consumer's in (one IOB per stream: each bank
         # holds exactly one constant vector, sharing an IOB would clobber values)
@@ -1280,6 +1295,7 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
             else:
                 opc = OPC[op]
                 m0 = m1 = 0
+                _dtup = {}
                 for e in EDGES:
                     if e.head != nid: continue
                     operand = OPND_ASSIGN.get(
@@ -1289,6 +1305,17 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                     slot_v = op_mux_slot(PEBLK_INV[pe], operand, 'in', in_p)
                     if operand == 0: m0 = slot_v
                     else: m1 = slot_v
+                    _dtup[operand] = (in_p, slot_v, 'io_in_%d' % in_p)
+                # A PE samples all its pins in one cycle, so two operands that
+                # resolve to the same pin or the same selector read one value --
+                # the "computes (x+1)^2 instead of (x+1)*x" failure. Assert it
+                # here so the alias names itself instead of showing up as a wrong
+                # number in simulation.
+                if len(_dtup) == 2:
+                    _a0, _a1 = _dtup[0], _dtup[1]
+                    assert _a0[0] != _a1[0] and _a0[1] != _a1[1], (
+                        'operand alias on PE %d (node %s): op0 %s vs op1 %s'
+                        % (pe, node_by_id[nid].getOpName(), _a0, _a1))
             w1 = opc | (m0 << 13) | (m1 << 16)
             # ADG PE node id == cfg block number (PEBLK values); INST2BLK is GIB-only
             assert pe in PE_BLKS, 'PE node %d not a cfg block' % pe
