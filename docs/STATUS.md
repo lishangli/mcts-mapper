@@ -151,7 +151,16 @@ and `dfg_quad` with `NO_PHASE=0` returns the exact sequence 20, 30, 42, … 3080
 (skew 0, rmse 0.50) where it used to return perfect squares.
 
 The default is now `S2_NO_PHASE=0`. The cost is that routes must hit an exact
-residue, which historically produced "no parity route" mapping failures — those
-must be counted, never traded back for silently wrong data.
+residue, and it is **paid immediately and completely**: `nn3x2` — the 12-node
+dense layer that used to run in 530 cycles — no longer maps at all (1862 s, six
+remap attempts), failing on
+
+    conflict 30 otrackE_0 (idx 3 from edge21(20->21) vs idx 0 from stream0(iob11->15))
+
+i.e. a stream wants the same GIB port an edge already drives. The old mode
+"resolved" that by relaxing the residue, which is exactly how it produced wrong
+data. So correctness currently costs the whole dense path, and the next
+engineering step is to make the stream side of that conflict resolvable (a
+different IOB, a different pin, or slot-aware claiming) rather than to revert.
 
 `
