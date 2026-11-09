@@ -96,9 +96,13 @@ SLOT_OCC = os.environ.get('S2_SLOT_OCC', '0') == '1'
 # mod-4 check only adds failures. Time-folded operators (S2_PACK) keep it,
 # because there each PE hosts two different ops and the output is only valid in
 # the context its slot is active.
-NO_PHASE = os.environ.get(
-    'S2_NO_PHASE',
-    '0' if os.environ.get('S2_PACK', '0') == '1' else '1') == '1'
+# S2_NO_PHASE=1 drops the context-residue constraint so a route may take any
+# delay mod 4. Measured 2026-11-07: that silently lets a node's two operands
+# sample DIFFERENT samples -- dfg_dsub (y=(x+1)-x) returns -2 instead of 1, and
+# dfg_quad returns squares -- while S2_NO_PHASE=0 gets both right. Correctness
+# first, so the default is now 0; expect more "no parity route" mapping failures
+# and record them rather than trading them back for silent wrong data.
+NO_PHASE = os.environ.get('S2_NO_PHASE', '0') == '1'
 # S2_ALIGN_OPNDS=1 makes every operand of a node take the SAME path delay.
 # A PE samples all input pins in one cycle, so equal delay is the only way the
 # node multiplies the same sample twice; the mod-4 residue is not enough (the

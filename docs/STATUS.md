@@ -137,4 +137,21 @@ python gen_nn.py --inputs 4 --outputs 2 --name nn4x2
 
 # convolution layer (compiler flow)
 # build tools/conv/main_conv_timed.c as described in tools/conv/README.md
-```
+``## Root cause of the misalignment (2026-11-07)
+
+Every skew, and every "duplicate operand", since round 1 has one cause:
+`S2_NO_PHASE=1` (the old default) drops the mod-4 context-residue constraint, so
+a route may take any delay and a node's two operands can sample **different
+samples**. The binary probe makes it unambiguous — `y = (x+1) - x`:
+
+    S2_NO_PHASE=1   ->  -2      (wrong)
+    S2_NO_PHASE=0   ->   1      (correct)
+
+and `dfg_quad` with `NO_PHASE=0` returns the exact sequence 20, 30, 42, … 3080
+(skew 0, rmse 0.50) where it used to return perfect squares.
+
+The default is now `S2_NO_PHASE=0`. The cost is that routes must hit an exact
+residue, which historically produced "no parity route" mapping failures — those
+must be counted, never traded back for silently wrong data.
+
+`
