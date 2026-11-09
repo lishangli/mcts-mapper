@@ -162,8 +162,15 @@ draw the same case fails as `no parity route 20->21 (bumped 3)` instead. Both ar
 the same weakness: with an exact residue required, the router either cannot find
 a route with that residue or finds one that collides. **The constraint is
 satisfiable for 3-5 node graphs (dfg_quad, dfg_add1, dfg_dsub all route and are
-now numerically correct) and not for 12.** Making it usable is a router project
-(bump `c0` and re-derive the consumers' contexts), not a bug fix; the default
-stays 0 because the alternative is silent wrong data.
+now numerically correct) and not for 12.** Making it usable is a router project. Three mitigations were tried and all three
+fail at 12 nodes: reserving the stream path before the rip-up victims are
+re-routed (conflict just moves), routing the longest operand first (failure moves
+to a different edge), and trying all four `c0` launches (failure moves again).
+The last two failures report **free resources with no admissible route** —
+`kind: congestion, free_hops 9, free_pins [4,5,6,7]` — so the required residue is
+simply not reachable by the router's path set.
+
+The default stays 0: large graphs then fail loudly instead of producing silent
+wrong data, which is the intended trade.
 
 `

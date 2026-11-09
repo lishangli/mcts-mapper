@@ -969,8 +969,19 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
             # launched in another context; try the four offsets before giving up.
             fail = None
             c0_use = c0_est
-            for c0_use in ([c0_est + s for s in (0, 1, 2, 3)] if SLOT_OCC
-                           else [c0_est]):
+            if os.environ.get('S2_ROUTE_HARD_FIRST', '0') == '1' and len(seq) > 1:
+                # Long edges have the fewest admissible paths, so give them the
+                # wires first: under the exact-residue constraint the short ones
+                # can then bend around them instead of the other way round.
+                seq = sorted(seq, key=dist_of, reverse=True)
+            # Under the exact-residue constraint (S2_NO_PHASE=0) the failure is
+            # usually arithmetic: the reachable delays do not hit the required
+            # residue (measured: 'kind: congestion, free_hops 3, free_pins
+            # 0,1,2,3' -- free resources, no admissible residue). Launching the
+            # node one context later changes the wanted residue, so try all four
+            # offsets whenever the residue is enforced, not only when slots are.
+            for c0_use in ([c0_est + s for s in (0, 1, 2, 3)]
+                           if (SLOT_OCC or not NO_PHASE) else [c0_est]):
                 fail = route_operands(seq, c0_use)
                 if fail is None:
                     break
