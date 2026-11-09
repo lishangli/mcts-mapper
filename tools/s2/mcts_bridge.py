@@ -117,6 +117,8 @@ ALIGN_OPNDS = os.environ.get('S2_ALIGN_OPNDS', '0') == '1'
 # still maps and still passes the constant-stimulus regression, so this list is
 # the only visible record of a correctness hole.
 ALIGN_FAILS = []
+# (gib_inst, port) -> how many times write_ok refused it, for conflict diagnosis
+WREJ = {}
 # S2_STREAM_DELAY (default OFF, see below) is the cheap half of the skew fix: a stream pin is
 # sampled with the node's routed operands, so the IOB path must take the same
 # number of registered hops as the longest one. This is one BFS per stream and
@@ -484,7 +486,9 @@ def iob_stream_route(dst_inst, port, avoid=(), occ=(), delay=None, only=None):
         if pa and occ.strict and (g, p) in occ: continue
         for kind, gib, dstport, idx, src in r.preds(g, p):
             if kind == 'mux':
-                if not occ.write_ok((gib, dstport), idx): continue
+                if not occ.write_ok((gib, dstport), idx):
+                    WREJ[(gib, dstport)] = WREJ.get((gib, dstport), 0) + 1
+                    continue
             elif pa and not occ.read_ok((g, p)):
                 continue
             nd = d + (1 if is_reg(g, p) else 0)
@@ -765,6 +769,19 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
             hi, lo = info['cfg']
             key = (slot, blk, dstport)
             prev = gib_owner.get(key)
+            if prev is not None and prev[1] != idx:
+                # Say WHY the occupancy let this through: if occ.cfg has no entry
+                # for this wire, some rip-up released the claim and never
+                # re-claimed it; if it has one with another idx, the BFS ignored
+                # a live claim. WREJ counts how often write_ok refused this wire.
+                _occ = [ (k, sorted(v)) for k, v in occ.cfg.items()
+                         if k[0] == gib_inst and k[1] == dstport ]
+                _rd = [ k for k in occ.rd if k[0] == gib_inst and k[1] == dstport ]
+                print('CONFLICT blk=%d inst=%d port=%s slot=%d: prev idx=%d (%s) now idx=%d (%s)'
+                      % (blk, gib_inst, dstport, slot, prev[1], prev[0], idx, label))
+                print('   occ.cfg entries: %s' % _occ)
+                print('   occ.rd entries : %s' % _rd)
+                print('   write_ok rejects on this wire: %d' % WREJ.get((gib_inst, dstport), 0))
             assert prev is None or prev[1] == idx, \
                 'conflict %d %s (idx %d from %s vs idx %d from %s)' \
                 % (blk, dstport, prev[1], prev[0], idx, label)
