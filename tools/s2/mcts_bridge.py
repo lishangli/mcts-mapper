@@ -1233,6 +1233,14 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                 iob_of[cnid] = n
                 used_iob.add(n)
                 din_meta.append((si_eff, n, val))
+            if os.environ.get('S2_DUMP_PATHS') == '1':
+                # destination-first, like the edge dump: the leftmost hop is the
+                # one that drives the consumer's pin, the rightmost must reach
+                # an IOB output
+                print('stream %d(iob%d->pe%d) hops=%d: %s' % (
+                    si_eff, n, PEBLK_INV[placement[consumer]], len(pa),
+                    ' -> '.join('%d.%s[idx=%s=%s]' % (g, dp, ix, _srcname(g, dp, ix))
+                                for g, dp, ix in pa)))
             for gib, dstport, idx in pa:
                 if idx is not None:
                     for slot in (0, 1):
