@@ -1189,6 +1189,7 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                 return None, None
 
             got = None
+            st_claim = None
             cand_sets = [[]] + [ROUTED[-k:] for k in (1, 2, 3, 4, 6, 8)
                                 if len(ROUTED) >= k]
             for victims in cand_sets:
@@ -1198,6 +1199,12 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                     occ.release(v['claimed']); v['claimed'] = []
                 in_p, got = _try_stream()
                 if got:
+                    # Reserve the stream's path BEFORE the victims are re-routed.
+                    # Otherwise a victim can take the very same port with a
+                    # different index, and the later occ.claim(pa) does not
+                    # re-validate -- that is the
+                    # 'conflict 30 otrackE_0 (idx 3 vs idx 0)' failure.
+                    st_claim = occ.claim(got[1])
                     ok = True
                     for v in victims:
                         p = route_parity(v['src'], v['dst'], v['port'],
@@ -1220,12 +1227,14 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                         occ.release(v['claimed'])
                     v['claimed'] = m
                 got = None
+                st_claim = None
             assert got is not None, 'no const IOB'
             port_used.setdefault(dst_inst, set()).add(in_p)
             port_of[e0.id] = in_p
             n, pa = got
             sdly.setdefault(consumer, path_delay(pa))
-            occ.claim(pa)
+            if st_claim is None:
+                occ.claim(pa)
             # One IOB per stream VALUE, fanned out to every consumer pin: the
             # DMA cost is per stream per launch (~5-6 cycles), so paying it once
             # per consumer is what kept the dense ceiling at ~6 ops/cycle.
