@@ -170,7 +170,17 @@ The last two failures report **free resources with no admissible route** —
 `kind: congestion, free_hops 9, free_pins [4,5,6,7]` — so the required residue is
 simply not reachable by the router's path set.
 
-The default stays 0: large graphs then fail loudly instead of producing silent
-wrong data, which is the intended trade.
+A fourth mitigation — a delay-exact fallback using `route_exact` at the concrete
+delays of the required residue, motivated by `route_reach.py` proving all four
+residues reachable — also fails, and the failure moves to yet another edge, again
+with free pins and 11 free hops.
+
+So at 12 nodes the strict mode is a **congestion** problem (the wires *between*
+free pins are taken), not a residue or a search problem. Four mitigations with
+four different failing edges is where 30-minute steps stop paying: the next work
+is placement/routing co-optimisation, not another tweak.
+
+The default stays 0: large graphs fail loudly instead of producing silent wrong
+data, which is the intended trade.
 
 `

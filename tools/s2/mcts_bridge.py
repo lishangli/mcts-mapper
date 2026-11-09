@@ -868,6 +868,29 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                                 in_p, path = cand, p2
                                 slots = path_slots(p2, c0_est if c0e is None else c0e)
                                 break
+                    if path is None and not NO_PHASE:
+                        # The residue is enforced, so route_parity only accepts
+                        # paths whose delay is ≡ want. route_reach showed those
+                        # residues ARE reachable (PE 17->68: all four at 4-12
+                        # hops), so before falling back to the parity-agnostic
+                        # route -- whose failure is what the log quotes -- try an
+                        # exact delay of the right residue.
+                        _want = ((c0_est if c0e is None else c0e)
+                                 - ctx_of[e.tail]) % 4
+                        _c0 = (c0_est if c0e is None else c0e)
+                        for cand in group_ports(di, opnd):
+                            if cand in port_used.get(di, ()):
+                                continue
+                            for _d in range(_want, 13, 4):
+                                p3 = route_exact(src_pe, di, cand, _d,
+                                                 occ=occ, c0=_c0)
+                                if p3:
+                                    in_p, path = cand, p3
+                                    slots = (path_slots(p3, _c0) if SLOT_OCC
+                                             else None)
+                                    break
+                            if path is not None:
+                                break
                     if path is None:
                         # no parity path (or the feature is off): fall back to the
                         # slot-agnostic route, claimed conservatively
