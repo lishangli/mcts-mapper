@@ -95,12 +95,15 @@ informative, so the design is constrained rather than speculative:
   `S2_PACK` also turns `S2_NO_PHASE` off and a stream IOB cannot hit an exact
   context residue. A fold decided *before* routing would pick the residue and
   the path together.
-* **operand delays must be equalised per node, cheaply.** The one-sample skew is
-  real (`dfg_quad`: s = -1, rmse 0.38) and equal-delay routing removes it
-  (rmse 0.00), but the implementation costs 30+ minutes of mapping at 12 nodes
-  and deadlocks at 20. The scheduler should therefore *place for equal depth*
-  (e.g. prefer producers at equal Manhattan distance) instead of repairing delay
-  after the fact.
+* **operand delays must be equalised per node, cheaply — but the stream half of
+  it is blocked by a real bug.** The one-sample skew is real (`dfg_quad`: s = -1,
+  rmse 0.38) and equal-delay routing removes it (rmse 0.00), but the full version
+  costs 30+ minutes of mapping at 12 nodes and deadlocks at 20. The cheap half —
+  matching only the stream's hop count (`S2_STREAM_DELAY`) — was measurably
+  unsafe: it makes `dfg_quad` compute (x+1)^2, i.e. a multi-hop stream path lets
+  both multiply pins read one source (`docs/EXPERIMENTS.md` round 26, 104 s repo).
+  Fixing that collision is the **first** step of the scheduler work, and it is
+  cheap to iterate on now that the failure reproduces in under two minutes.
 * **II is a property of the schedule, not a flag.** Folding two ops onto one PE
   only helps if both operand sets are live in different contexts; a phase-aware
   scheduler can state that as a constraint (node n uses context c mod 2) and a

@@ -113,6 +113,17 @@ ALIGN_OPNDS = os.environ.get('S2_ALIGN_OPNDS', '0') == '1'
 # still maps and still passes the constant-stimulus regression, so this list is
 # the only visible record of a correctness hole.
 ALIGN_FAILS = []
+# S2_STREAM_DELAY (default OFF, see below) is the cheap half of the skew fix: a stream pin is
+# sampled with the node's routed operands, so the IOB path must take the same
+# number of registered hops as the longest one. This is one BFS per stream and
+# costs no measurable mapping time. The expensive half - re-routing every compute
+# operand to a common delay - stays behind S2_ALIGN_OPNDS (off).
+#
+# Measured 2026-11-07: turning it on makes dfg_quad compute (x+1)^2 instead of
+# (x+1)*x -- a multi-hop stream path lets both multiply pins read one source -- so
+# it is off until that collision is understood. It does give a 104 s reproduction
+# of the duplicate-source bug: S2_INPUT_RAMP=1 S2_STREAM_DELAY=1 on dfg_quad.
+STREAM_DELAY = os.environ.get('S2_STREAM_DELAY', '0') == '1'
 # S2_STREAM_SHARE=1: one IOB per input value, fanned out to every consumer pin.
 # Off = the old behaviour (one IOB per consumer), useful for A/B comparisons of
 # both the kernel cost and the mapping time.
@@ -1152,7 +1163,7 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                     if cand in port_used.get(dst_inst, ()): continue
                     if IW['pe_in'][str(dst_inst)].get(str(cand)) is None: continue
                     g = iob_stream_route(dst_inst, cand, used_iob, occ,
-                                         delay=tgt if ALIGN_OPNDS else None,
+                                         delay=tgt if STREAM_DELAY else None,
                                          only=iob_of.get(cnid) if SHARE_STREAMS else None)
                     if g:
                         return cand, g
