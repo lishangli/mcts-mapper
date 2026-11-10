@@ -538,7 +538,8 @@ def group_ports(inst, operand):
 LAST_ROUTE_FAIL = {}   # set when route_operand runs out of candidates
 OPND_ASSIGN = {}       # edge id -> operand mux actually wired (may be swapped)
 
-def route_operand(src_inst, dst_inst, operand, prefer=None, occ=(), used_ports=()):
+def route_operand(src_inst, dst_inst, operand, prefer=None, occ=(), used_ports=(),
+                  want=None):
     """route to a port in the operand's mux group (per-PE heterogeneous).
     used_ports: pins already carrying a signal for this PE - a physical pin can
     only carry one value, so two operands on the same pin silently alias.
@@ -571,6 +572,30 @@ def route_operand(src_inst, dst_inst, operand, prefer=None, occ=(), used_ports=(
             free_path = route_to_terms(tuple(tgt),
                                        set(tuple(x) for x in IW['pe_out'][str(src_inst)]),
                                        ())
+    if (os.environ.get('S2_DUMP_BLOCK') == '1' and want is not None
+            and BLOCK_PRINTS[0] < 3):
+        # The residue is what has to be satisfied, so inspect a path that HAS it
+        # (route_exact at want, want+4, ...) rather than the shortest one: the
+        # earlier dump read the wrong wires and made every failure look like
+        # generic congestion.
+        for _pin in free_pins or group_ports(dst_inst, operand):
+            _p = None
+            for _d in (want, want + 4, want + 8, want + 12):
+                _p = route_exact(src_inst, dst_inst, _pin, _d, occ=Occ())
+                if _p:
+                    break
+            if not _p:
+                continue
+            BLOCK_PRINTS[0] += 1
+            print('BLOCK-ADMISSIBLE src=%d dst=%d op%d pin=%d delay=%d over %d hops'
+                  % (src_inst, dst_inst, operand, _pin, path_delay(_p), len(_p)))
+            for _g, _dp, _ix in _p:
+                _cfg = [(k, sorted(v)) for k, v in occ.cfg.items()
+                        if k[0] == _g and k[1] == _dp]
+                _rd = [k for k in occ.rd if k[0] == _g and k[1] == _dp]
+                print('   %d.%s want idx=%s | occ.cfg=%s occ.rd=%s'
+                      % (_g, _dp, _ix, _cfg, _rd))
+            break
     if (free_path is not None and os.environ.get('S2_DUMP_BLOCK') == '1'
             and BLOCK_PRINTS[0] < 3):
         # The failure is 'congestion', which means an empty-occupancy path EXISTS
@@ -910,10 +935,11 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                     if path is None:
                         # no parity path (or the feature is off): fall back to the
                         # slot-agnostic route, claimed conservatively
-                        in_p, path = route_operand(src_pe, di, opnd,
-                                                   prefer=port_of.get(e.id),
-                                                   occ=occ,
-                                                   used_ports=port_used.get(di, ()))
+                        in_p, path = route_operand(
+                            src_pe, di, opnd, prefer=port_of.get(e.id), occ=occ,
+                            used_ports=port_used.get(di, ()),
+                            want=((c0_est if c0e is None else c0e)
+                                  - ctx_of[e.tail]) % 4 if not NO_PHASE else None)
                         slots = None
                     if not path:
                         return e
