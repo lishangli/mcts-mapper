@@ -870,6 +870,9 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                 ctx_of[nid] = ctx_of[ins[0].tail]; continue
             hs = {}
             claimed = {}   # edge id -> mux outputs it currently owns in `occ`
+            # (gib, port) -> edge that configured it, so a blocked edge can name
+            # and release the exact owner instead of replaying "recent" edges
+            wire_owner = {}
             opnd_of = {}
             di = PEBLK_INV[placement[nid]]
             # Operands of one node compete for the same pins and the same last-hop
@@ -949,6 +952,8 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                     # claim immediately: sibling edges of this same node must not
                     # be allowed to reuse a mux this edge already drives
                     claimed[e.id] = occ.claim(path, slots)
+                    for _g, _dp, _ix in path:
+                        wire_owner.setdefault((_g, _dp), e.id)
                 return None
 
             seq = [e for e in ins if not is_stream(e.tail)]
@@ -961,6 +966,9 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                 """undo this node's routing so another operand order can be tried"""
                 for e in seq:
                     occ.release(claimed.pop(e.id, []))
+                    for _k, _v in list(wire_owner.items()):
+                        if _v == e.id:
+                            wire_owner.pop(_k, None)
                     hs.pop(e.id, None); route_of.pop(e.id, None)
                     port_of.pop(e.id, None)
                 if pins_before: port_used[di] = set(pins_before)
@@ -1084,6 +1092,36 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                         abs(pe_xy(v['dst'])[0] - dx) + abs(pe_xy(v['dst'])[1] - dy) <= 2]
                 if near:
                     sets.append(near[-6:])
+                if os.environ.get('S2_TARGET_RIPUP', '0') == '1':
+                    # Targeted victims: whoever owns a wire on a path that
+                    # actually satisfies the residue. Round 42 named the blocker
+                    # (37.otrackE_0 held idx 2 while the admissible path needs 4)
+                    # but "recent k edges" never included its owner.
+                    _owners = set()
+                    try:
+                        _want_ = ((base_c0 - ctx_of[e.tail]) % 4)
+                        for _pin in group_ports(di, opnd_of.get(e.id, 0)):
+                            _p, _hit = None, None
+                            for _d in (_want_, _want_ + 4, _want_ + 8):
+                                _p = route_exact(PEBLK_INV[placement[e.tail]], di,
+                                                 _pin, _d, occ=Occ())
+                                if _p:
+                                    break
+                            if not _p:
+                                continue
+                            for _g, _dp, _ix in _p:
+                                _o = wire_owner.get((_g, _dp))
+                                if _o is not None and _o != e.id:
+                                    _owners.add(_o)
+                            break
+                    except Exception:
+                        _owners = set()
+                    if _owners:
+                        vs = [v for v in ROUTED if v['eid'] in _owners]
+                        if vs:
+                            sets.insert(0, vs)
+                            print('target rip-up: %d owner(s) of an admissible '
+                                  'path for edge%d' % (len(vs), e.id))
                 for victims in sets:
                     snap = (copy.deepcopy(occ.cfg), copy.deepcopy(occ.rd))
                     marks = [v['claimed'] for v in victims]
