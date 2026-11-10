@@ -119,6 +119,7 @@ ALIGN_OPNDS = os.environ.get('S2_ALIGN_OPNDS', '0') == '1'
 ALIGN_FAILS = []
 # (gib_inst, port) -> how many times write_ok refused it, for conflict diagnosis
 WREJ = {}
+BLOCK_PRINTS = [0]   # cap the S2_DUMP_BLOCK output
 # S2_STREAM_DELAY (default OFF, see below) is the cheap half of the skew fix: a stream pin is
 # sampled with the node's routed operands, so the IOB path must take the same
 # number of registered hops as the longest one. This is one BFS per stream and
@@ -570,6 +571,21 @@ def route_operand(src_inst, dst_inst, operand, prefer=None, occ=(), used_ports=(
             free_path = route_to_terms(tuple(tgt),
                                        set(tuple(x) for x in IW['pe_out'][str(src_inst)]),
                                        ())
+    if (free_path is not None and os.environ.get('S2_DUMP_BLOCK') == '1'
+            and BLOCK_PRINTS[0] < 3):
+        # The failure is 'congestion', which means an empty-occupancy path EXISTS
+        # and the live occupancy blocks it. Print that path wire by wire with the
+        # occupancy state, so the blocker is a wire and a state, not a guess.
+        BLOCK_PRINTS[0] += 1
+        print('BLOCK src=%d dst=%d op%d: empty-occ path delay=%d over %d hops'
+              % (src_inst, dst_inst, operand, path_delay(free_path),
+                 len(free_path)))
+        for _g, _dp, _ix in free_path:
+            _cfg = [(k, sorted(v)) for k, v in occ.cfg.items()
+                    if k[0] == _g and k[1] == _dp]
+            _rd = [k for k in occ.rd if k[0] == _g and k[1] == _dp]
+            print('   %d.%s want idx=%s | occ.cfg=%s occ.rd=%s'
+                  % (_g, _dp, _ix, _cfg, _rd))
     LAST_ROUTE_FAIL.clear()
     LAST_ROUTE_FAIL.update({
         'src': src_inst, 'dst': dst_inst, 'operand': operand,
