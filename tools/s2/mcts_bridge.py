@@ -1323,6 +1323,33 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
             st_claim = None
             cand_sets = [[]] + [ROUTED[-k:] for k in (1, 2, 3, 4, 6, 8)
                                 if len(ROUTED) >= k]
+            # Same treatment as the compute edges: probe a path with EMPTY
+            # occupancy first. If one exists, the blockers are nameable, so try
+            # their owners first; if none exists, the pin is simply unreachable
+            # and no amount of rip-up will help.
+            _probe = None
+            if os.environ.get('S2_TARGET_RIPUP', '0') == '1':
+                _others = [hs[e.id] for e in EDGES if e.head == consumer and e.id in hs]
+                _tgt = max(_others) if _others else sdly.get(consumer)
+                for _cand in group_ports(dst_inst, opnd):
+                    if _cand in port_used.get(dst_inst, ()):
+                        continue
+                    if IW['pe_in'][str(dst_inst)].get(str(_cand)) is None:
+                        continue
+                    _g = iob_stream_route(dst_inst, _cand, set(), Occ(),
+                                          delay=_tgt if STREAM_DELAY else None,
+                                          only=iob_of.get(cnid) if SHARE_STREAMS else None)
+                    if _g:
+                        _probe = (_cand, _g[1])   # (pin, path): _g is (iob, path)
+                        break
+                if _probe:
+                    _own = {wire_owner.get((g, dp)) for g, dp, _i in _probe[1]}
+                    _own.discard(None)
+                    _vs = [v for v in ROUTED if v['eid'] in _own]
+                    if _vs:
+                        cand_sets.insert(0, _vs)
+                        print('stream target rip-up: %d owner(s) of an admissible '
+                              'IOB path for stream%d' % (len(_vs), si))
             for victims in cand_sets:
                 snap = (copy.deepcopy(occ.cfg), copy.deepcopy(occ.rd)) if victims else None
                 marks = [v['claimed'] for v in victims]
@@ -1359,6 +1386,9 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                     v['claimed'] = m
                 got = None
                 st_claim = None
+            if got is None and _probe is not None:
+                print('stream blocked: an admissible IOB path exists (pin=%d, %d hops) '
+                      'but no victim set freed it' % (_probe[0], len(_probe[1])))
             assert got is not None, 'no const IOB'
             port_used.setdefault(dst_inst, set()).add(in_p)
             port_of[e0.id] = in_p
