@@ -285,6 +285,26 @@ def as_occ(occ):
     """normalise the optional occ argument (bare tuple/set/None -> empty table)"""
     return occ if isinstance(occ, Occ) else Occ(strict=STRICT_OCC)
 
+def path_ok(occ, path, slots=None, slot=None):
+    """(index, entry, kind) of the first hop that may NOT be taken, or None.
+
+    Both routing stages must agree on this: a mux hop writes the output it
+    configures, so it needs write_ok((gib, port), idx, bank); a track/direct hop
+    reads the wire it came from, so it needs read_ok((gib, port), bank). The
+    first (unconstrained) pass used to check write_ok without a bank and one
+    re-claim path skipped the check entirely, which is how two edges ended up
+    owning one mux output at different indices.
+    """
+    for i, ent in enumerate(path):
+        sl = slot if slots is None else slots[i]
+        gib, port, idx = ent[0], ent[1], ent[2]
+        if idx is None:
+            if not occ.read_ok((gib, port), sl):
+                return (i, ent, 'read')
+        elif not occ.write_ok((gib, port), idx, sl):
+            return (i, ent, 'write')
+    return None
+
 def restore_base(ins, base, base_pins, hs, route_of, claimed, port_of,
                  port_used, di, occ):
     """Roll one node's in-edge routes back to the snapshot taken right after its
@@ -1211,7 +1231,34 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                     p2 = route_parity(PEBLK_INV[placement[e.tail]], di,
                                       port_of[e.id], want, occ=occ, c0=base_c0)
                     if p2 is None:
-                        claimed[e.id] = occ.claim(route_of[e.id])
+                        # No parity route: keep the first pass's path, but it must
+                        # still be legal NOW -- its claim was released above and
+                        # another edge may have taken one of its mux outputs in a
+                        # different bank. Re-claiming it blind is how
+                        # "conflict 90 otrackS_0 (idx 3 vs idx 4)" reached the
+                        # emitter.
+                        bad = path_ok(occ, route_of[e.id])
+                        if bad is not None:
+                            p3 = route_exact(PEBLK_INV[placement[e.tail]], di,
+                                             port_of[e.id], hs[e.id], occ=occ,
+                                             c0=base_c0)
+                            if p3 is None:
+                                _i, _ent, _k = bad
+                                print('slot pass cannot honour occupancy for '
+                                      'edge%d(%d->%d): hop %d %d.%s wants idx=%s '
+                                      '(%s) but occ holds %s'
+                                      % (e.id, e.tail, e.head, _i, _ent[0],
+                                         _ent[1], _ent[2], _k,
+                                         [(kk, sorted(vv)) for kk, vv in occ.cfg.items()
+                                          if kk[0] == _ent[0] and kk[1] == _ent[1]]))
+                                assert False, ('slot re-route failed for edge%d '
+                                               '(%d->%d)' % (e.id, e.tail, e.head))
+                            p2 = p3
+                            route_of[e.id] = p2
+                            hs[e.id] = path_delay(p2)
+                        claimed[e.id] = occ.claim(
+                            route_of[e.id],
+                            path_slots(route_of[e.id], base_c0) if SLOT_OCC else None)
                         continue
                     hs[e.id] = path_delay(p2); route_of[e.id] = p2
                     claimed[e.id] = occ.claim(p2, path_slots(p2, base_c0))
