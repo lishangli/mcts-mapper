@@ -51,8 +51,12 @@ pays config download and the ~250-cycle window drain
 (`EXECUTION_MODEL.md`): at 256 samples nn4x2 is at 68 % of its marginal and
 nn3x2 at 71 %.
 
-The convolution does not fit this formula because its operands are **spatial**
-(a 9-tap window arrives in one cycle, so c_load is amortised across taps):
+**Correction (2026-11-07, round 53): the convolution is nine input streams, not a
+window.** Its launch issues nine `load_data(... , 1024, ...)` calls — one per tap,
+each 256 words — and `tools/conv/main_conv_timed.c` hands it nine pointers. So the conv
+row is the *same* law as the dense rows, with I = 9 and O = 1: nine streams per
+output word, each carrying one tap of the same input image. Nothing in the launch
+fetches a multi-word window in one cycle.
 
     ops/cycle = 18 ops per output word / 1.0 cycles per word = 18.1   (measured)
 
@@ -105,7 +109,22 @@ For a dense layer to reach 18 ops/cycle with I inputs and O outputs:
 
     (2 x I x O) / (O x c_store + I x c_load) >= 18     with c_store = 1.43, c_load = 0.21
 
-which needs `I >= 9` at O large enough to amortise, i.e. the same 9-way reuse the
-convolution gets from its taps — **and** mapping capacity for ~2I-1 nodes per
-output, **and** a readback of 256/O samples. None of the three is currently
-available; the numbers above say which one binds first in each case.
+which needs `I >= 9` at O large enough to amortise — that is, **nine input
+streams per output word, which is literally what the convolution launch issues**
+(nine `load_data` calls of 1024 B, one per tap; correcting the earlier "one window
+per cycle" reading) — **and** mapping capacity for ~2I-1 nodes per output, **and**
+a readback of 256/O samples. None of the three is currently available; the
+numbers above say which one binds first in each case.
+
+What the correction changes: the conv number is not evidence of a hardware
+window that dense cannot use. It is evidence that **nine operand streams per
+output word is achievable on this array**, and our own emitter already produces
+several input streams per kernel (`docs/STATUS.md`, stream sharing). So the only
+thing separating dense from the conv's 18 ops/cycle is the arithmetic depth per
+output — 2I-1 nodes — which the mapper cannot place (rounds 44-53). The
+performance gap is therefore a *compiler* gap, not a hardware one, and the
+publishable statement is that the same law covers both kernels:
+
+    ops/cycle = 2 x I / (cycles per output word)
+    dense  I=4: 8 / 1.43 = 5.6 marginal (2.91 average at 256 samples)
+    conv   I=9: 18 / 1.0 = 18.1 measured
