@@ -197,6 +197,31 @@ exclusive) leaves the case unroutable, failing `no parity route 11->12`.
 What binds is the **one-driver-per-mux-output** model together with the
 exact-residue requirement, and that is a placement problem, not a search one.
 
+**Placement is now closed too (round 53).** The last lever was moving a node
+whose operands would not route: the repair ranks free PEs by real Manhattan
+distance (radius 4) and re-runs that node's whole pass, reverting on failure. It
+fires — and every move fails:
+
+    m1_2 104 -> 138 (dist [8])  fail
+    m1_2 104 -> 139 (dist [10]) fail
+    m1_2 104 -> 172 (dist [10]) fail
+    m1_1  72 -> 38  (dist [4])  fail
+
+So relocating a node 4-10 hops does not make its operands routable at an equal
+delay. With seven routing mitigations and two placement strategies exhausted, the
+conclusion is **structural rather than a tuning problem**:
+
+> Under the exact-residue requirement this mapper places DFGs of up to ~5 nodes
+> (`dfg_quad`, `dfg_add1`, `dfg_dsub`: bit-exact) and **not 12** (`nn3x2`), and
+> neither wiring order, rip-up, context bumps, read fan-out, delay-exact search,
+> nor node relocation changes that. Making layer-scale dense mapping work needs
+> the phase-aware joint scheduler in `docs/ITERATION_PLAN.md` §7 — contexts and
+> routes decided together — which is a compiler project, not a knob.
+
+What that leaves as verified performance: the AG-fed convolution at
+**18.1-19.8 ops/cycle** (42/42 bit-exact, `tools/conv/run.sh`), and the strict
+mode's correctness on small kernels.
+
 The default stays 0: large graphs fail loudly instead of producing silent wrong
 data, which is the intended trade.
 

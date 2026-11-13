@@ -1032,13 +1032,21 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                 taken = set(placement.values())
                 # placement values are PE *blocks*; PEBLK maps inst -> blk, so the
                 # candidate space is PEBLK_INV's keys (a first version walked PEBLK
-                # and died on KeyError 101, i.e. an instance id used as a block)
+                # and died on KeyError 101, i.e. an instance id used as a block).
+                # Distance must be real Manhattan, not |block id| -- block ids are
+                # not a spatial metric, which is what produced the bogus "cands=0".
+                def _md(a, b):
+                    ax, ay = pe_xy(PEBLK_INV[a])
+                    bx, by = pe_xy(PEBLK_INV[b])
+                    if None in (ax, ay, bx, by):
+                        return 999
+                    return abs(ax - bx) + abs(ay - by)
                 cands = [x for x in PEBLK_INV if x not in taken and x != cur
-                         and abs(x - cur) <= 3]
+                         and _md(x, cur) <= 4]
                 # prefer a position whose distances to the producers repeat, i.e.
                 # where equal-depth routing has a chance
                 def _score(x):
-                    ds = [abs(x - p) for p in prod]
+                    ds = [_md(x, p) for p in prod]
                     return (len(ds) - len(set(ds)), sum(ds))
                 cands.sort(key=_score)
                 print('place-repair: node %s cur=%d prod=%s cands=%d'
@@ -1055,7 +1063,7 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                     f2 = route_operands(seq, c0e)
                     print('place-repair: node %s %d -> %d (dist %s) %s'
                           % (node_by_id[nid].getOpName(), cur, cand,
-                             [abs(cand - p) for p in prod],
+                             [_md(cand, p) for p in prod],
                              'ok' if f2 is None else 'fail'))
                     if f2 is None:
                         return True
