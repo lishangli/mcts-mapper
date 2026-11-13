@@ -189,6 +189,14 @@ could claim one output in different banks. Checking all banks removes that class
 entirely: a full run now reports 0 conflicts and fails on plain
 `no parity route 19->21`, i.e. retryable capacity rather than an abort.
 
+Two more levers were then tested and both are out. A stream cannot block a
+compute edge — the stream pass runs **after** the routing loop, so "let the edge
+take the stream's wires" is void by construction. And relaxing read exclusivity
+(`S2_RD_FANOUT=1`: a wire is read at the reader's mux, so only the driver is
+exclusive) leaves the case unroutable, failing `no parity route 11->12`.
+What binds is the **one-driver-per-mux-output** model together with the
+exact-residue requirement, and that is a placement problem, not a search one.
+
 The default stays 0: large graphs fail loudly instead of producing silent wrong
 data, which is the intended trade.
 

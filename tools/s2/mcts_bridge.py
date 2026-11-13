@@ -120,6 +120,10 @@ ALIGN_FAILS = []
 # (gib_inst, port) -> how many times write_ok refused it, for conflict diagnosis
 WREJ = {}
 BLOCK_PRINTS = [0]   # cap the S2_DUMP_BLOCK output
+# S2_RD_FANOUT=1 lets several consumers read one track wire (the read happens at
+# each reader's own mux, so only the driver is exclusive). Off by default until a
+# bit-exact run says the model was merely conservative.
+RD_FANOUT = os.environ.get('S2_RD_FANOUT', '0') == '1'
 # S2_STREAM_DELAY (default OFF, see below) is the cheap half of the skew fix: a stream pin is
 # sampled with the node's routed operands, so the IOB path must take the same
 # number of registered hops as the longest one. This is one BFS per stream and
@@ -203,6 +207,17 @@ class Occ:
         Same slot argument as write_ok: a wire can serve a reader in the other
         config bank, provided its driver is programmed there too.
         """
+        if RD_FANOUT:
+            # A wire is *read* at the reader's own mux, so several consumers can
+            # listen to one track. Only the driver side (a cfg entry for this
+            # wire in the same bank) is exclusive. Measured need: the failing
+            # nn3x2 path had every mux hop free and every itrack 'already read'.
+            if slot is None:
+                return not self._any_cfg(key)
+            for s in (slot, None):
+                if (key[0], key[1], s) in self.cfg:
+                    return False
+            return True
         if slot is None:
             return (not self._any_cfg(key) and
                     (key[0], key[1], 0) not in self.rd and
