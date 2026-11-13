@@ -184,9 +184,13 @@ class Occ:
             return not self._any_cfg(key) and not rd_used
         if rd_used:
             return False                    # somebody reads this wire: don't touch it
-        cands = (((key[0], key[1], 0), (key[0], key[1], 1), (key[0], key[1], None))
-                 if slot is None else
-                 ((key[0], key[1], slot), (key[0], key[1], None)))
+        # Check EVERY bank, not just this one: the emitted configuration writes
+        # each mux into both banks, so a wire must select the same input in both.
+        # Checking only (slot, None) let edge A claim idx 3 in bank 0 and edge B
+        # claim idx 2 in bank 1, which then surfaced at emit time as
+        # "CONFLICT ... prev idx=3 (edge3(5->6)) now idx=2 (edge5(7->8))" and
+        # aborted a whole 900 s attempt.
+        cands = ((key[0], key[1], 0), (key[0], key[1], 1), (key[0], key[1], None))
         for k in cands:
             idxs = self.cfg.get(k)
             if idxs is not None and idx not in idxs:
@@ -1389,6 +1393,21 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
             if got is None and _probe is not None:
                 print('stream blocked: an admissible IOB path exists (pin=%d, %d hops) '
                       'but no victim set freed it' % (_probe[0], len(_probe[1])))
+                if (os.environ.get('S2_DUMP_BLOCK') == '1'
+                        and BLOCK_PRINTS[0] < 6):
+                    # Name the holder of every hop, exactly as round 42 did for a
+                    # compute edge: the victim sets only contain compute edges, so
+                    # if the labels here are 'stream...' the blocker is another
+                    # stream and no edge rip-up can ever free it.
+                    BLOCK_PRINTS[0] += 1
+                    for _g, _dp, _ix in _probe[1]:
+                        _cfg = [(k, sorted(v)) for k, v in occ.cfg.items()
+                                if k[0] == _g and k[1] == _dp]
+                        _rd = [k for k in occ.rd if k[0] == _g and k[1] == _dp]
+                        _own = [gib_owner.get((s, _g, _dp)) for s in (0, 1)
+                                if gib_owner.get((s, _g, _dp))]
+                        print('   stream hop %d.%s want idx=%s | occ.cfg=%s occ.rd=%s '
+                              'owners=%s' % (_g, _dp, _ix, _cfg, _rd, _own))
             assert got is not None, 'no const IOB'
             port_used.setdefault(dst_inst, set()).add(in_p)
             port_of[e0.id] = in_p

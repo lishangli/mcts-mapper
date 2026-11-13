@@ -180,8 +180,14 @@ free pins are taken), not a residue or a search problem. The placement is not to
 blame either: the 25 placed nodes sit at min 2 / median 10 / max 32 hops apart
 with 0 adjacent pairs, so a spread pass would change nothing.
 
-What is left is one specific question — *which wire is double-booked* — which is
-the next step, not a redirection of the whole effort.
+The double-booked wires were then named. Two results followed: wiring **order** is
+not the lever (a reversed and a sorted topological order fail on different
+symptoms), and the mux `CONFLICT` aborts that used to burn a whole 900 s
+attempt were a **bank-scoped occupancy check** — `write_ok` looked only at
+`(slot, None)` while the emitter writes every mux into both banks, so two edges
+could claim one output in different banks. Checking all banks removes that class
+entirely: a full run now reports 0 conflicts and fails on plain
+`no parity route 19->21`, i.e. retryable capacity rather than an abort.
 
 The default stays 0: large graphs fail loudly instead of producing silent wrong
 data, which is the intended trade.
