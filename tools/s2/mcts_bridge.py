@@ -1000,6 +1000,74 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                 return None
 
             seq = [e for e in ins if not is_stream(e.tail)]
+            # ---- placement repair (S2_PLACE_REPAIR) -------------------------
+            # 12-node failures at the strict residue are congestion in the
+            # *unconstrained* pass, which runs before any parity stage exists, so
+            # the repair has to live here. Equal delay for a node's operands is
+            # intrinsic (a PE samples every pin in one cycle) and six routing-side
+            # mitigations failed, so when routing cannot equalise them, move a
+            # LEAF producer (in-degree 0: one outgoing edge, so nobody else's
+            # schedule can break) to a free PE whose distance matches its siblings'.
+            _indeg = {}
+            for _e2 in EDGES:
+                _indeg[_e2.head] = _indeg.get(_e2.head, 0) + 1
+            _moves = [0]
+
+            def place_repair_pre(c0e):
+                """Move THIS node, not a producer, when its operands will not route.
+
+                Moving a producer is only safe for a leaf, and measured 2026-11-07:
+                the failing node's producers are all internal, so leaf-only repair
+                cannot apply. Moving the consumer is contained instead: at this
+                point its out-edges have not been routed yet (the pass is
+                topological) and its in-edges are exactly what just failed, so one
+                rewind() undoes everything the move can invalidate.
+                """
+                global di, pins_before
+                if not PLACE_REPAIR or _moves[0] >= 3:
+                    return False
+                cur = placement[nid]
+                prod = [placement[e.tail] for e in ins
+                        if not is_stream(e.tail) and e.tail in placement]
+                taken = set(placement.values())
+                # placement values are PE *blocks*; PEBLK maps inst -> blk, so the
+                # candidate space is PEBLK_INV's keys (a first version walked PEBLK
+                # and died on KeyError 101, i.e. an instance id used as a block)
+                cands = [x for x in PEBLK_INV if x not in taken and x != cur
+                         and abs(x - cur) <= 3]
+                # prefer a position whose distances to the producers repeat, i.e.
+                # where equal-depth routing has a chance
+                def _score(x):
+                    ds = [abs(x - p) for p in prod]
+                    return (len(ds) - len(set(ds)), sum(ds))
+                cands.sort(key=_score)
+                print('place-repair: node %s cur=%d prod=%s cands=%d'
+                      % (node_by_id[nid].getOpName(), cur, prod, len(cands)))
+                for cand in cands:
+                    _moves[0] += 1
+                    rewind()
+                    snap_occ = (copy.deepcopy(occ.cfg), copy.deepcopy(occ.rd))
+                    snap_owner = dict(wire_owner)
+                    snap_di, snap_pins = di, pins_before
+                    placement[nid] = cand
+                    di = PEBLK_INV[cand]
+                    pins_before = set(port_used.get(di, ()))
+                    f2 = route_operands(seq, c0e)
+                    print('place-repair: node %s %d -> %d (dist %s) %s'
+                          % (node_by_id[nid].getOpName(), cur, cand,
+                             [abs(cand - p) for p in prod],
+                             'ok' if f2 is None else 'fail'))
+                    if f2 is None:
+                        return True
+                    rewind()
+                    placement[nid] = cur
+                    di, pins_before = snap_di, snap_pins
+                    occ.cfg, occ.rd = snap_occ
+                    wire_owner.clear(); wire_owner.update(snap_owner)
+                    if _moves[0] >= 3:
+                        return False
+                return False
+
             # provisional launch context: every operand arrives after at least one
             # hop; the settle() step refines it once the real delays are known
             c0_est = max([ctx_of[e.tail] + 1 for e in seq] + [1])
@@ -1209,6 +1277,8 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
 
             if fail is not None and CROSS_RIPUP:
                 fail = try_cross_ripup(fail)
+            if fail is not None and PLACE_REPAIR and place_repair_pre(c0_est):
+                fail = None
             if fail is not None:
                 assert False, 'no route %d->%d op%d %s' % (
                     fail.tail, fail.head, fail.operand, LAST_ROUTE_FAIL or '{}')
@@ -1307,69 +1377,6 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                     c0 = c0n
                 return True, c0, None
 
-            # ---- placement repair (S2_PLACE_REPAIR) -------------------------
-            # Equal delay for a node's operands is intrinsic to this machine (a PE
-            # samples all its pins in one cycle), and six routing-side mitigations
-            # failed, so when routing cannot equalise the operands, move a LEAF
-            # producer to a free PE at a distance closer to its siblings'.
-            # Leaf-only on purpose: a leaf has exactly one outgoing edge, so the
-            # move costs one rip-up and cannot disturb anyone else's schedule.
-            _indeg = {}
-            for _e2 in EDGES:
-                _indeg[_e2.head] = _indeg.get(_e2.head, 0) + 1
-            _moves = [0]
-
-            def place_repair(c0_try):
-                if not PLACE_REPAIR or _moves[0] >= 3:
-                    return None
-                npe = placement[nid]
-                prod = [e for e in ins if e.id in hs and not is_stream(e.tail)]
-                leaves = [e for e in prod if _indeg.get(e.tail, 0) == 0]
-                if not leaves:
-                    print('place-repair: no leaf producer for %s (all internal)'
-                          % node_by_id[nid].getOpName())
-                    return None
-                for e in leaves:
-                    cur = placement[e.tail]
-                    d_cur = abs(cur - npe)
-                    sib = [abs(placement[o.tail] - npe) for o in prod if o.id != e.id]
-                    if not sib or d_cur in sib:
-                        continue
-                    want_d = min(sib, key=lambda d: abs(d - d_cur))
-                    taken = set(placement.values())
-                    cands = [x for x in PEBLK if x not in taken
-                             and x != cur and abs(x - cur) <= 2
-                             and x != npe]
-                    cands.sort(key=lambda x: abs(abs(x - npe) - want_d))
-                    for cand in cands:
-                        _moves[0] += 1
-                        snap_occ = (copy.deepcopy(occ.cfg), copy.deepcopy(occ.rd))
-                        snap_pins = set(port_used.get(di, ()))
-                        snap_e = (hs.get(e.id), route_of.get(e.id),
-                                  port_of.get(e.id), claimed.get(e.id))
-                        occ.release(claimed.pop(e.id, []) or [])
-                        placement[e.tail] = cand
-                        hs.pop(e.id, None); route_of.pop(e.id, None)
-                        ok2, c02, _d2 = settle(c0_try)
-                        good = ok2
-                        print('place-repair: P%d %d -> %d (dist %d,%d) %s'
-                              % (e.tail, cur, cand, d_cur, abs(cand - npe),
-                                 'ok' if good else 'fail'))
-                        if good:
-                            return c02
-                        placement[e.tail] = cur
-                        occ.cfg, occ.rd = snap_occ
-                        port_used[di] = snap_pins
-                        hs.pop(e.id, None); route_of.pop(e.id, None)
-                        port_of.pop(e.id, None); claimed[e.id] = []
-                        if snap_e[0] is not None:
-                            hs[e.id] = snap_e[0]; route_of[e.id] = snap_e[1]
-                            port_of[e.id] = snap_e[2]
-                            claimed[e.id] = snap_e[3] or []
-                        if _moves[0] >= 3:
-                            return None
-                return None
-
             dead = None
             for bump in PHASE_LEVELS:
                 if bump:
@@ -1380,10 +1387,6 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                     c0 = base_c0
                 ok, c0, dead = settle(c0)
                 if ok: break
-            if not ok:
-                _c2 = place_repair(c0)
-                if _c2 is not None:
-                    ok, c0 = True, _c2
             assert ok, 'no parity route %d->%d (bumped %d)' % (
                 dead.tail, dead.head, PHASE_LEVELS[-1])
             PHASE_BUMPS[bump] = PHASE_BUMPS.get(bump, 0) + 1
