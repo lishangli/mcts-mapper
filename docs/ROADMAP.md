@@ -128,6 +128,35 @@ and the control still fails as it must. **The hardware side of M1 is done**: the
 number to quote from now on is "conv2d_3x3, 42/42, 195 cycles, binary of 2026-09-27
 02:07".
 
+**M1 close-out checklist (run these in your own terminal; the agent cannot).**
+
+```bash
+# a. pin the baseline: ignore generated artifacts, commit the 19 real source files
+cd /home/lsl/wafer-compiler-for-cgra/simulator/chipyard/generators/fdra
+printf 'cgra-mg/target/\nsims/generated-src/\n' >> .gitignore
+git status --porcelain | grep -v target/ | grep -v 'benchmarks/'
+git add .gitignore app-compiler cgra-compiler cgra-mg/src cgra-mg/project \
+        scripts sims/generated-src 2>/dev/null
+git commit -m "spatio-temporal WIP: MIN/MAX/CSHR/EQ/ULT ops, signed compares, interconnect/template"
+
+# b. the two RF unit tests. The header of RFTest.scala documents
+#    "project fdra; ..." but build.sbt declares no such project (single-project
+#    build), so try the documented form first and fall back to the bare one:
+cd cgra-mg
+sbt "project fdra; Test/runMain tram.dsa.RFRotatingTest" || \
+  sbt "Test/runMain tram.dsa.RFRotatingTest"
+sbt "project fdra; Test/runMain tram.dsa.RFStaticTest"  || \
+  sbt "Test/runMain tram.dsa.RFStaticTest"
+# expect 5 tests passed and 2 tests passed
+
+# c. after any RTL change, prove the new binary was used before quoting numbers
+ls -l --time-style=long-iso ../sims/verilator/simulator-chipyard-TramSoCConfig
+/home/lsl/mapping/mcts-mapper/tools/conv/run.sh     # must still print 42/42, 195 cycles
+```
+
+If a step's output differs from the expectation above, stop and record it — a
+baseline that cannot be reproduced is not a baseline.
+
 M1 exit criteria therefore become concrete: (a) the worktree is pinned (commit or
 stash), (b) both RF unit tests run and pass, (c) a relu-equivalent RTL test exists
 **in the tree** and passes, (d) the 15-DFG regression numbers are reproduced with a
@@ -136,6 +165,35 @@ named command.
 **M1 — freeze and re-verify the hardware baseline (1-2 steps).**
 Confirm `cgra_rot_en` / slot state in `TramSpec.scala`, re-run the 15-DFG regression and
 the relu RTL test, and record the exact build flags. Exit: numbers reproduce.
+
+**M2 entry state, verified 2026-11-08 (read-only).**
+
+| question | answer | evidence |
+|---|---|---|
+| Where is a mapping's cost computed today? | `MappingState.sum_reward`, accumulated **per route step** while building the mapping: `+1` per placement, `ROUTE_STEP_COST` per hop, `-registered_hop_penalty` per registered hop | `src/env/state.py:520, 704-715, 767-783` |
+| How does MCTS compare candidates? | by that sum: `node.reward = state.get_reward() - cur_latency` | `src/agent/mcts.py:268-281` |
+| Is there any schedule object? | **no**. The state holds a placement plus routes; nothing represents "iteration" or "period" | `src/env/state.py:511-520` |
+| Does the hardware expose II? | `ii` / `loop_cycles` exist in the ISA and were annotated in 2026-09-26, and the compiler's `io_scheduler` already emits dual-slot configs | `cgra-mg/src/main/scala/soc/ISA.scala` (ii/loop_cycles block), `cgra-compiler/src/mapper/io_scheduler.cpp` |
+
+**What "II as the objective" therefore means concretely.** The cost is per-route, so
+II cannot enter it until the mapper produces something a period can be computed
+from. The minimal, honest definition for this flow — streams are iterations, so a
+DFG of N samples *is* a loop body executed N times:
+
+    for every cycle c in the dependence graph (a path that returns to a node):
+        II(c) = ceil( total_registered_delay(c) / distance(c) )      # Mardas
+    II(mapping) = max over c of II(c), and 1 if there is no cycle
+
+    cost(mapping) = II(mapping) * N + fill(mapping)   instead of  sum_reward
+
+For the accumulator kernel `y_j = y_{j-1} + x_j` that gives II = 2 with one
+registered hop in the loop, which is exactly the M3 target, and it is computable
+**without** new hardware work.
+
+First code step: `ii_of_mapping(placement, routes, dfg)` in this repo (pure Python,
+no simulator), unit-tested on a hand-built 3-node accumulator (expect 2) and on
+`dfg_dot9` (expect 1, no cycle). Only after that number exists does it make sense
+to change `mcts.py`'s comparison — that is the "minimal change", in that order.
 
 **M2 — make II the objective (2-3 steps).**
 The evaluator must score a schedule by `II` and `loop_cycles`, not by a single-pass
