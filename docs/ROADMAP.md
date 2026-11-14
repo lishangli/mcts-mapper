@@ -114,6 +114,20 @@ tree**, which is the strongest argument for pinning it before any number is take
   changes), **not leftovers** — but they are uncommitted, so HEAD `eb19a16` is *not*
   what the last verified run used.
 
+**M1 step 3 result (2026-11-08): the installed binary IS the baseline, and it still computes correctly.** The simulator (`sims/verilator/simulator-chipyard-TramSoCConfig`, built
+**2026-09-27 02:07**) post-dates every file under `cgra-mg/src/main/scala` (newest
+01:07) and every compiled class, so it includes the spatio-temporal changes and the
+uncommitted `MIN/MAX/CSHR/EQ/ULT` work. Running `tools/conv/run.sh` against it:
+
+    CONV_PERF cycles=195
+    conv2d_3x3: 42/42 bit-exact with the transposed tap order (C^T), 0 mismatch
+    control: 0/42 with the row-major order (C)
+
+So with `cgra_rot_en=true` and the dual-slot compiler, the datapath is still bit-exact
+and the control still fails as it must. **The hardware side of M1 is done**: the
+number to quote from now on is "conv2d_3x3, 42/42, 195 cycles, binary of 2026-09-27
+02:07".
+
 M1 exit criteria therefore become concrete: (a) the worktree is pinned (commit or
 stash), (b) both RF unit tests run and pass, (c) a relu-equivalent RTL test exists
 **in the tree** and passes, (d) the 15-DFG regression numbers are reproduced with a
