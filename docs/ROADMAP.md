@@ -57,6 +57,31 @@ Entry state (from `SPATIOTEMPORAL_RF_DESIGN.md`): rotating RF implemented and un
 (5+2 tests), double-buffered config implemented, **RTL verified end-to-end**
 (relu 8/8, 86 cycles), 15-DFG regression 9.067 vs SA 10.533 (15/15 wins).
 
+**M1 entry state, verified 2026-11-08 (read-only; no build run).**
+
+| fact | evidence | status |
+|---|---|---|
+| `cgra_rot_en = true` | `cgra-mg/src/main/scala/spec/TramSpec.scala:81` (comment: "enable rotating RF + config slot switching"); read through `dsa/template/CGRA.scala:142` | confirmed |
+| dual-buffered config in RTL | `dsa/interconnect/Interconnect.scala:440` (`cfg_slot_wr` input), `:498-505` (`cfgA`/`cfgB` + enable), driven by `soc/CGRAController.scala:208` | confirmed |
+| dual-slot config **in the compiler** | `cgra-compiler/src/mapper/io_scheduler.cpp`, HEAD `eb19a16` "io_scheduler: dual-slot config emission for spatio-temporal RTL + IOB mapping guard" | confirmed |
+| rotating RF in the PE | `dsa/pe/PE.scala:158-191` (`rf.io.out(1)` "value produced k contexts ago"), config field `:332` | confirmed |
+| unit tests | `cgra-mg/src/test/scala/dsa/RFTest.scala`; run with `sbt "project fdra; Test/runMain tram.dsa.RFRotatingTest"` and `... RFStaticTest` | present, unrun this round |
+| hardware branch / HEAD | branch `spatio-temporal-compiler`, HEAD `eb19a16` | recorded |
+| **relu RTL test** | no `relu` file anywhere under `fdra`; only referenced in `SPATIOTEMPORAL_RF_DESIGN.md` | **not in the tree — the 2026-09-26 "RELU PASS 8/8" is a record, not an artifact** |
+| fdra worktree state | `git status` shows modified `app-compiler/*`, `benchmarks/test4/conv2d_3x3/cgra_call.txt` and others | **dirty: must be committed or stashed before any number can be called a baseline** |
+
+Environment constraints (from `SPATIOTEMPORAL_RF_DESIGN.md` and the 2026-09-26 session, not
+re-verified here): agent-side `make` trips safe-delete (>500 files) so builds must run
+in the user's terminal; `TramSpec.loadSpec()` reads a stale `tram_spec.json` while `make`
+uses `TramSpec.scala` — verification must use the latter; simulation needs
+`+permissive +loadmem=<hex> +loadmem_addr=0x80000000 +permissive-off` with the hex
+written as the whole objcopy raw image **byte-reversed**.
+
+M1 exit criteria therefore become concrete: (a) the worktree is pinned (commit or
+stash), (b) both RF unit tests run and pass, (c) a relu-equivalent RTL test exists
+**in the tree** and passes, (d) the 15-DFG regression numbers are reproduced with a
+named command.
+
 **M1 — freeze and re-verify the hardware baseline (1-2 steps).**
 Confirm `cgra_rot_en` / slot state in `TramSpec.scala`, re-run the 15-DFG regression and
 the relu RTL test, and record the exact build flags. Exit: numbers reproduce.
