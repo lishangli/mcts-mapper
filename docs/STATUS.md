@@ -218,6 +218,14 @@ conclusion is **structural rather than a tuning problem**:
 > the phase-aware joint scheduler in `docs/ITERATION_PLAN.md` §7 — contexts and
 > routes decided together — which is a compiler project, not a knob.
 
+A **serial accumulation chain does not escape it** (round 55). `dfg_dot9` (nine
+taps, 17 compute nodes, chained left to right) was built to avoid a reduction
+tree, and it fails the same way: once placement is prevented from choosing
+structurally unreachable pairs (`reachable_pins`, which removed that whole failure
+class), the run stops at `no parity route 24->32`. Each ADD is itself a two-input
+merge whose operands must arrive in the same cycle, so a chain has exactly as
+many merges as a tree — **depth was never the obstacle, alignment is**.
+
 What that leaves as verified performance: the AG-fed convolution at
 **18.1-19.8 ops/cycle** (42/42 bit-exact, `tools/conv/run.sh`), and the strict
 mode's correctness on small kernels.
