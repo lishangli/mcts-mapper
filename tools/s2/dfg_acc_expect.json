@@ -1,0 +1,27 @@
+{
+ "name": "acc",
+ "params": {
+  "inputs": 1,
+  "outputs": 1,
+  "seed": 0
+ },
+ "weights": [
+  [
+   1
+  ]
+ ],
+ "bias": [
+  0
+ ],
+ "input_values": [
+  1
+ ],
+ "compute_nodes": 1,
+ "expect": [
+  1,
+  2,
+  3,
+  4
+ ],
+ "note": "y_j = y_{j-1} + x_j with x = 1: the capture must be a running sum, which only a real recurrence (rotating RF, II=2) can produce"
+}

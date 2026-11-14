@@ -212,6 +212,29 @@ Tests in `tests/test_ii.py`, all passing:
 nothing in the flow produces one, and the mapper has never been asked to place a
 graph with a recurrence. That is what M3 has to change first.
 
+**M2 step 2 (2026-11-08): the DFG format accepts a recurrence; the mapper does not.**
+`tools/s2/dfg_acc.json` (`y_j = y_{j-1} + x_j`, a **self-loop on the ADD**) parses
+cleanly — the loader returns edge 1 as `(tail=1, head=1, operand=1)`. So the
+format was never the obstacle. The mapper's DAG assumptions are, and they are
+listed here so the next round does not rediscover them:
+
+| place | what a self-loop does | verdict |
+|---|---|---|
+| `preds[e.head].append(e.tail)` (`mcts_bridge.py:888-890`) | `preds[1]` contains 1 | harmless by itself |
+| `visit()` (`:947-951`) | adds `nid` to `visd` **before** recursing, so the self-edge returns immediately | **harmless** — no recursion limit hit |
+| `ins = [e for e in EDGES if e.head == nid]` (`:965`) | the node's own output is one of its operands | **wrong schedule**: it is treated as an ordinary operand |
+| `ctx_of[e.tail]` in the `want` computation (`:1001, 1020, 1042`) | `e.tail == nid`, whose `ctx_of` is only assigned *after* routing (`:1379`) | **crash** (`KeyError`) or a stale value |
+| `base_c0 = max([ctx_of[e.tail] + hs[e.id] ...])` (`:1365`) | self-reference in the launch estimate | **crash** (`KeyError`) |
+| `PEBLK_INV[placement[e.tail]]` in the routing loop (`:1042`) | routes from the node's own PE to itself | **fails or finds a nonsense path** |
+| `settle`/`align_operands` equal-delay rule (`:1200-1330`) | demands the recurrence operand arrive in the *same* cycle | **wrong by construction**: it arrives one iteration earlier, i.e. `ctx - II` |
+
+**Minimal fix (M3 step 1):** classify an edge with `tail == head` as a *recurrence*
+edge: remove it from `ins` (so it is neither routed for alignment nor counted in
+`base_c0`), give it a fixed delay of `II` (2 here) and the context
+`ctx_of[nid] - II`, and let the emitter program the RF rotation for that operand
+with `k = II / exe_ii = 1`. That is a ~30-line change confined to the node loop,
+and it is the first time this flow would place a graph with a real recurrence.
+
 **M2 — make II the objective (2-3 steps).**
 The evaluator must score a schedule by `II` and `loop_cycles`, not by a single-pass
 latency. Exit: a dense kernel reports II and cycles, and the trade-off is visible

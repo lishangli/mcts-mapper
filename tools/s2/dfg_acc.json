@@ -1,0 +1,49 @@
+{
+ "name": "acc",
+ "directed": true,
+ "objects": [
+  {
+   "opcode": "INPUT",
+   "name": "x0",
+   "ref_name": "%x0",
+   "pattern": "4, 91",
+   "size": "256",
+   "offset": "0, 0",
+   "_gvid": 0
+  },
+  {
+   "opcode": "ADD",
+   "name": "acc",
+   "_gvid": 1
+  },
+  {
+   "opcode": "OUTPUT",
+   "name": "out",
+   "ref_name": "%out0",
+   "pattern": "4, 91",
+   "size": "256",
+   "offset": "0, 0",
+   "_gvid": 2
+  }
+ ],
+ "edges": [
+  {
+   "_gvid": 0,
+   "tail": 0,
+   "head": 1,
+   "operand": 0
+  },
+  {
+   "_gvid": 1,
+   "tail": 1,
+   "head": 1,
+   "operand": 1
+  },
+  {
+   "_gvid": 2,
+   "tail": 1,
+   "head": 2,
+   "operand": 0
+  }
+ ]
+}
