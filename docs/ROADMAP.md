@@ -77,6 +77,43 @@ uses `TramSpec.scala` — verification must use the latter; simulation needs
 `+permissive +loadmem=<hex> +loadmem_addr=0x80000000 +permissive-off` with the hex
 written as the whole objcopy raw image **byte-reversed**.
 
+**M1 step 2 result (2026-11-08): the relu test was never committed.** `git log
+--all --diff-filter=A -- '*relu*'`, `git log --all -S relu` and `git stash list` are all
+empty; the branches are `spatio-temporal-compiler`, `spatio-temporal-rtl` and the
+origin branches. So the 2026-09-26 run used an ad-hoc program that lived outside the
+repo, and M1 must **put a test in the tree** rather than recover one.
+
+**The ISA does support relu — in the uncommitted work.** `git diff` of
+`cgra-mg/src/main/scala/op/Operations.scala` adds `MIN/MAX/CSHR/EQ/ULT` to the `OPC`
+enumeration and changes `MIN/MAX` to compare with `asSInt` (signed), so
+`relu(x) = MAX(x, 0)` is expressible. That fix exists **only in the working
+tree**, which is the strongest argument for pinning it before any number is taken.
+
+**Minimal RTL test plan (to be written into the tree next round):**
+
+| item | value |
+|---|---|
+| kernel A (pipeline only) | `y = x + 1`: 1 ADD node, II irrelevant, exercises load -> PE -> store. With the constant stimulus x=1 the capture must be 2. |
+| kernel B (relu) | `y = MAX(x, 0)` with signed compare; stimulus = ramp `x_j = j - 4` (so it goes negative), expected `0,0,0,0,0,1,2,3,...`. Needs the uncommitted `MAX`. |
+| kernel C (cross-context) | `y_j = y_{j-1} + x_j` at II = 2, accumulator held in the rotating RF; with `x = 1` the capture must be `1,2,3,4,...`. **This is the only one of the three that exercises the spatio-temporal mechanism**, so it is the M1 gate for M3. |
+| build | the official bare-metal flags from `software/tests` (`-DBAREMETAL=1 -nostdlib -static -T test.ld -march=rv64gc`), includes `riscv-tests/env` + `benchmarks/common` |
+| simulate | `sims/verilator/simulator-chipyard-TramSoCConfig` with `+permissive +loadmem=<hex> +loadmem_addr=0x80000000 +permissive-off`; the hex is the whole objcopy raw image **byte-reversed** |
+| pass | capture equals the expected sequence with 0 mismatches; note a chain of two config commands costs one extra cycle (measured 86 vs 85 in the 2026-09-26 relu run) |
+| where | a new `benchmarks/test4/spatiotemporal/` directory **committed**, so this cannot be lost again |
+
+**Worktree classification (236 dirty entries):**
+
+* `cgra-mg/target/**` (≈120) and `benchmarks/test4/**` outputs (≈95) — **generated
+  artifacts**, not work: they should be gitignored, and they are the reason a
+  "clean tree" measurement is currently impossible.
+* **19 real source files**: `app-compiler/llvm-pass/*` (CDFG pass), `cgra-compiler/*`
+  (mapper, mapping, main, mapper_sa), `cgra-mg/src/main/scala/{dsa/interconnect/Interconnect.scala,
+  dsa/template/CGRA.scala, op/Operations.scala}`, `cgra-mg/src/main/resources/operations.json`,
+  `scripts/{run-verilator,setup-paths}.sh`. These are deliberate spatio-temporal
+  work (the `MIN/MAX/CSHR/EQ/ULT` ops, signed compares, interconnect and template
+  changes), **not leftovers** — but they are uncommitted, so HEAD `eb19a16` is *not*
+  what the last verified run used.
+
 M1 exit criteria therefore become concrete: (a) the worktree is pinned (commit or
 stash), (b) both RF unit tests run and pass, (c) a relu-equivalent RTL test exists
 **in the tree** and passes, (d) the 15-DFG regression numbers are reproduced with a
