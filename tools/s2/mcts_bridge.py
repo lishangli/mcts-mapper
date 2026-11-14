@@ -1747,7 +1747,12 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                 # number in simulation.
                 if len(_dtup) == 2:
                     _a0, _a1 = _dtup[0], _dtup[1]
-                    assert _a0[0] != _a1[0] and _a0[1] != _a1[1], (
+                    # Only an identical (pin, selector) pair is an alias: each pin
+                    # has its own mux, so the same selector VALUE on two pins
+                    # selects two different wires. The first version required both
+                    # to differ, which fired on legal configs -- measured on
+                    # dfg_quad after a placement change: pin0/sel1 vs pin4/sel1.
+                    assert _a0 != _a1, (
                         'operand alias on PE %d (node %s): op0 %s vs op1 %s'
                         % (pe, node_by_id[nid].getOpName(), _a0, _a1))
             w1 = opc | (m0 << 13) | (m1 << 16)

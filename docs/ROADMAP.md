@@ -324,6 +324,29 @@ expect file was fixed to one value per channel. **The real test is a ramp**
 (`S2_INPUT_RAMP=1`), where a correct recurrence must produce 1, 2, 3, 4, ... and a
 missing RF rotation will produce 1, 1, 1, 1 — that is M3's next single question.
 
+**M3 step 5 (2026-11-08): the regression run says the env changes cost alignment.**
+Two runs, as planned:
+
+| run | result |
+|---|---|
+| `dfg_acc` | **maps, emits, executes**: `load=25 exec=5 store=40 total=219 caps=1 got=[1]` |
+| `dfg_quad` ramp | maps and runs (`load=26 exec=5 store=6 total=268`), but the ramp fit gives **skew = -3 samples** (rmse 0.54) where earlier rounds recorded **0** |
+
+So the three env changes that let a recurrence be placed **did cost the acyclic
+kernel its alignment**, and the first thing to note is that this was caught only
+because the round ran the regression at all. The assertion that fired first
+(`operand alias on PE 277: op0 (0,1) vs op1 (4,1)`) was **my own over-strict
+check** — equal selector *values* on two different pins select two different wires
+— and is now relaxed to "identical (pin, selector) pair".
+
+Candidates for the skew, in order of likelihood: (a) `updateAdj` re-adding
+newly ready nodes changes the placement order; (b) the `canMapping` self-edge skip
+should be inert on a DAG; (c) `calculateCost`'s -1 guard should be inert too.
+**Next round bisects (a)**: run `dfg_quad` ramp with the `updateAdj` block
+commented out and compare the fitted skew — one run decides whether the placement
+order or something subtler is responsible, and the strict mode's alignment must not
+be traded for the recurrence.
+
 **M2 — make II the objective (2-3 steps).**
 The evaluator must score a schedule by `II` and `loop_cycles`, not by a single-pass
 latency. Exit: a dense kernel reports II and cycles, and the trade-off is visible
