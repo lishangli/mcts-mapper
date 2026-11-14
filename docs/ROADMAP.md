@@ -235,6 +235,26 @@ edge: remove it from `ins` (so it is neither routed for alignment nor counted in
 with `k = II / exe_ii = 1`. That is a ~30-line change confined to the node loop,
 and it is the first time this flow would place a graph with a real recurrence.
 
+**M3 step 1 result (2026-11-08): the recurrence-edge change is in, but it never runs —
+the blocker is upstream.** The bridge now classifies `tail == head` edges into
+`REC_EDGES` and drops them from `ins` (`mcts_bridge.py`, the node loop), but
+`dfg_acc` fails long before that loop:
+
+    stats: gave up after 12 attempts, failures {}
+    MAPPING/EMISSION FAILED
+
+`failures {}` is the tell: not one routing assertion ran, so the failure is in
+**placement**, not in emission. `mapping.test_mapping()` (`src/mapper/mapping.py:374`)
+returns `None` for this DFG — the MCTS asks the agent for a move, gets `-1`, and
+breaks on the first iteration (`mapping.py:390-397`), leaving `latencies` empty.
+
+So the first thing that cannot represent a loop is **the mapping environment's
+action space**, not the bridge and not the DFG format. The next round has to answer
+exactly one question — *why does the first action come back -1* — by checking
+`MappingState.get_available_actions()` / `is_terminal()` on a 3-node cyclic DFG,
+and whether the env builds its traversal from a topological order (which a cycle
+does not have).
+
 **M2 — make II the objective (2-3 steps).**
 The evaluator must score a schedule by `II` and `loop_cycles`, not by a single-pass
 latency. Exit: a dense kernel reports II and cycles, and the trade-off is visible

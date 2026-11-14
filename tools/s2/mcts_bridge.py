@@ -958,6 +958,9 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
         # mux configs shareable by input index, wires read as a source exclusive
         occ = Occ(strict=STRICT_OCC)
         port_used = {}   # pe inst -> input pins already carrying a signal
+        # node -> [(edge id, operand, II)] for tail==head edges, so the emit stage
+        # can see which operands must come from the rotating RF
+        REC_EDGES = {}
         for nid in order:
             op = op_of[nid]
             if op in ('INPUT', 'CONST'):
@@ -965,6 +968,20 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
             ins = [e for e in EDGES if e.head == nid]
             if op == 'OUTPUT':
                 ctx_of[nid] = ctx_of[ins[0].tail]; continue
+            # Recurrence edges (tail == head) carry the node's OWN previous
+            # output: their data comes from the rotating RF one iteration ago, not
+            # from a route. Keeping them in `ins` is what makes the mapper treat a
+            # loop as a DAG -- ctx_of[e.tail] would be the node's own, not yet
+            # assigned, context (docs/ROADMAP.md, M2 step 2).
+            REC = [e for e in ins if e.tail == nid]
+            REC_II = int(os.environ.get('S2_REC_II', '2'))
+            if REC:
+                ins = [e for e in ins if e.tail != nid]
+                REC_EDGES[nid] = [(e.id, e.operand, REC_II) for e in REC]
+                print('recurrence: node %s has %d self edge(s), II=%d '
+                      '(operand(s) %s come from the RF, not a route)'
+                      % (node_by_id[nid].getOpName(), len(REC), REC_II,
+                         [e.operand for e in REC]))
             hs = {}
             claimed = {}   # edge id -> mux outputs it currently owns in `occ`
             # (gib, port) -> edge that configured it, so a blocked edge can name
