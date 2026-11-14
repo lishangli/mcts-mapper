@@ -255,6 +255,33 @@ exactly one question — *why does the first action come back -1* — by checkin
 and whether the env builds its traversal from a topological order (which a cycle
 does not have).
 
+**M3 step 2 (2026-11-08): the action space is the cause, and the first fix is not
+enough.** `tools/s2/probe_actions.py` makes the mechanism visible without a mapping run:
+
+    dfg_acc    nodes=3  edges=3  terminal=False actions=32  ready=[0]
+               after one move: terminal=True actions=0 ready=[0]
+    dfg_dot9   nodes=36 edges=35 terminal=False actions=1440 ready=[0..17]
+               after one move: terminal=False actions=1400 ready=[0..17]
+
+So the ADD never becomes available: `MaskManager.init_mask` seeds placement with
+nodes whose **incoming column is all zero** (`src/env/mask_manager.py:53-58`) and
+`activate_ready_nodes` re-derives readiness the same way (`:126-135`), so a
+self-edge keeps the ADD permanently unready and the mapping terminates after one
+placement.
+
+The minimal change — ignore the diagonal in both functions, since a recurrence is
+satisfied by the node's own previous iteration — is now in, and **it did not change
+the outcome**: the probe still shows `terminal=True actions=0` after one move, and
+one `dfg_acc` mapping attempt still fails in 52 s with 0 recurrence prints. So the
+self-edge exclusion is necessary but the readiness path that matters is elsewhere
+(`MappingState.updateMeta` removes the placed node and extends with
+`find_successors_nodes`, `src/env/state.py:284-295`, after `updateAdj` has already
+rewritten the row to `-1`).
+
+**Next round's single question:** for the ADD, print `dfg_adj[:, 1]`,
+`dfg_features_vec[1, 6]` and `dfg_mask[1].sum()` before and after placing the
+input, so the exact predicate that fails is named. No mapping run until then.
+
 **M2 — make II the objective (2-3 steps).**
 The evaluator must score a schedule by `II` and `loop_cycles`, not by a single-pass
 latency. Exit: a dense kernel reports II and cycles, and the trade-off is visible
