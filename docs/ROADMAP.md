@@ -1,0 +1,91 @@
+# Roadmap: from mapper experiments to a measured NN on the CGRA
+
+Status: written 2026-11-08 after 55 experiment rounds in `docs/EXPERIMENTS.md`.
+This file exists because those rounds were **tactical** (one hypothesis each) and
+had no global plan; the last ~20 of them were spent inside a sub-problem that the
+2026-09-26 decision had already ruled out.
+
+## 1. The goal, and the two tracks
+
+Goal: a **measured** high-performance neural-network kernel on the RISCV-CGRA
+(bit-exact, reproducible with one command), plus the compiler machinery that gets
+there.
+
+There are exactly two tracks, and they are not alternatives:
+
+* **Track A (spatial, this repo `tools/s2`)** — the mapper emits one
+  configuration per kernel; performance comes from how well the DFG fits.
+  **Status: closed for dense** (§3). It still provides the measurement
+  infrastructure, the emitter, and the negative results.
+* **Track B (spatiotemporal, `SPATIOTEMPORAL_RF_DESIGN.md` + the `fdra` hardware
+  repo)** — restore the RF/II machinery that Tram was designed around, make **II**
+  the objective, and run several contexts per configuration. This is where the
+  remaining headroom is.
+
+## 2. What is settled (do not re-derive)
+
+| result | value | where |
+|---|---|---|
+| conv2d_3x3, bit-exact, reproducible | **18.1-19.8 ops/cycle** (195 cycles, 3528 ops) | `tools/conv/run.sh` |
+| dense via per-sample DMA `nn4x2` | 1.57 / 2.24 / **2.91** ops/cycle at 64/128/256 samples | `docs/AG_FED_DENSE.md` |
+| the law behind both | `ops/cycle = 2*I / (cycles per output word)`; dense I=4, conv **I=9 streams** | same |
+| what conv really does | **nine `load_data` streams, one per tap** — no hardware window | round 53 |
+| stream sharing | -27 % cycles on nn4x2 (889 -> 653), bit-exact | `docs/STATUS.md` |
+| readback budget | ~1 KiB per launch; auto-clamped in the emitter | round 21 |
+| strict-residue routing capacity | ~5 nodes; **fails at 12** (`nn3x2`) and at 17 (`dfg_dot9`) | rounds 44-55 |
+| why it fails | **merge alignment**, not depth: every ADD needs both operands in one cycle, so a serial chain has as many merges as a tree | round 55 |
+| emitter health | 0 mux conflicts in a full run; 0 silent double-booking | rounds 45-48 |
+
+## 3. What is closed, and why that is a result
+
+Spatial dense mapping at layer scale is **not achievable in this flow**, and the
+evidence is now systematic rather than anecdotal:
+
+* seven routing mitigations (early claim, hard-first order, four c0 bumps,
+  delay-exact fallback, targeted rip-up of edges, of streams, read fan-out) — each
+  moved the failing edge, none removed the failure;
+* two placement strategies (leaf-producer moves, consumer relocation up to 10 hops
+  with reachability filtering) — the repair fires and the node still cannot route;
+* the failure is intrinsic: `hw latency` for a spatial mapping is dominated by
+  configuration size and structure, not by mapping quality (2026-09-26 diagnosis).
+
+**This is a publishable negative result**, and it is the reason Track B exists.
+
+## 4. Track B plan (the actual work now)
+
+Entry state (from `SPATIOTEMPORAL_RF_DESIGN.md`): rotating RF implemented and unit-tested
+(5+2 tests), double-buffered config implemented, **RTL verified end-to-end**
+(relu 8/8, 86 cycles), 15-DFG regression 9.067 vs SA 10.533 (15/15 wins).
+
+**M1 — freeze and re-verify the hardware baseline (1-2 steps).**
+Confirm `cgra_rot_en` / slot state in `TramSpec.scala`, re-run the 15-DFG regression and
+the relu RTL test, and record the exact build flags. Exit: numbers reproduce.
+
+**M2 — make II the objective (2-3 steps).**
+The evaluator must score a schedule by `II` and `loop_cycles`, not by a single-pass
+latency. Exit: a dense kernel reports II and cycles, and the trade-off is visible
+in the numbers.
+
+**M3 — modulo scheduling for one dense layer (3-4 steps).**
+Take the 9-tap dot product (`tools/s2/dfg_dot9.json`, the kernel that Track A cannot
+place) and schedule it with II = 2 across two contexts, using the rotating RF for
+the accumulator. Exit: bit-exact value 45 in RTL, II reported.
+
+**M4 — one real layer end-to-end (3-5 steps).**
+A layer with I inputs and O outputs, fed by I streams (conv-style), from the same
+data path the conv uses. Exit: bit-exact, ops/cycle reported next to the conv's
+18.1 and the DMA-dense 2.9.
+
+**M5 — write-up (2 steps).**
+Two results and one method: the `2I` law with both kernels measured; the alignment
+negative result (seven mitigations, two placement strategies); the spatiotemporal
+restoration with II as the objective.
+
+## 5. Rules for the loop from here
+
+1. **Every round names its milestone** (M1..M5). A round that does not advance one
+   is a documentation round and must say so.
+2. **Two consecutive rounds on the same failure signature is a decision point**,
+   not a third attempt: either a recorded design change or an explicit closure.
+3. **No new mapper tweaks** for dense. Track A is a measurement harness now.
+4. Every number quoted must be reproducible by one command in the repo.
