@@ -195,6 +195,23 @@ no simulator), unit-tested on a hand-built 3-node accumulator (expect 2) and on
 `dfg_dot9` (expect 1, no cycle). Only after that number exists does it make sense
 to change `mcts.py`'s comparison — that is the "minimal change", in that order.
 
+**M2 first code step done (2026-11-08): `src/agent/ii.py`.** `ii_of_mapping(dfg, weights)`
+returns `(II, {cycle: II(cycle)}, truncated)`; the constant is `CYCLES_PER_CTX = 2`,
+taken from the scheduler's own note that "only registered hops advance the
+context (exe_ii = 2 cycles each)" (`tools/s2/mcts_bridge.py`, `path_slots`). Cycle
+enumeration is capped at 20k partial paths and reports truncation.
+Tests in `tests/test_ii.py`, all passing:
+
+    accumulator II = 2      (y_j = y_{j-1} + x_j, one registered hop on the loop)
+    dot9 II        = 1      (acyclic: a feed-forward kernel retires one sample/cycle)
+    two-hop II     = 4
+    weights        = {7: 1} (weights_from_routes counts registered hops)
+
+**Open question this exposes:** every DFG in `tools/s2` today is acyclic, so
+`ii_of_mapping` returns 1 for all of them — the format *can* hold a back edge, but
+nothing in the flow produces one, and the mapper has never been asked to place a
+graph with a recurrence. That is what M3 has to change first.
+
 **M2 — make II the objective (2-3 steps).**
 The evaluator must score a schedule by `II` and `loop_cycles`, not by a single-pass
 latency. Exit: a dense kernel reports II and cycles, and the trade-off is visible
