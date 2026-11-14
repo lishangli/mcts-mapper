@@ -282,6 +282,26 @@ rewritten the row to `-1`).
 `dfg_features_vec[1, 6]` and `dfg_mask[1].sum()` before and after placing the
 input, so the exact predicate that fails is named. No mapping run until then.
 
+**M3 step 3 (2026-11-08): the action list was the missing piece, and the ADD is now
+placeable.** The probe's four prints named it exactly:
+
+    [initial] node 1 self-loop: adj[:,1]=[1,1,0] zeroed=[1,0,0] feat6=-1 dfg_mask=0   in_place_cur=False
+    after one move:  terminal=True  actions=0   ready=[]        dfg_mask[1]=323
+    [after]   node 1 self-loop: adj[:,1]=[-1,1,0] zeroed=[-1,0,0] dfg_mask=323 in_place_cur=False
+
+So `activate_ready_nodes` **did** make the ADD ready (`dfg_mask = 323 > 0`) as soon as
+the diagonal was ignored, but `place_cur_node` stayed empty: `get_actions()` iterates
+`place_cur_node`, while `updateMeta` fills it from the successor row that `updateAdj`
+has already rewritten to `-1`. One loop in `MappingState.updateAdj` now re-adds any
+node whose `dfg_mask` became positive (`src/env/state.py`), and the probe shows:
+
+    dfg_acc   after one move: terminal=False actions=128  ready=[1]
+    dfg_dot9  after one move: terminal=False actions=1400 ready=[1..17]
+
+The acyclic control is unchanged in count and now correctly drops the placed node
+from `ready` (it used to keep it). **M3's next step is the first mapping attempt of
+`dfg_acc`**, followed by a `dfg_quad` regression run.
+
 **M2 — make II the objective (2-3 steps).**
 The evaluator must score a schedule by `II` and `loop_cycles`, not by a single-pass
 latency. Exit: a dense kernel reports II and cycles, and the trade-off is visible

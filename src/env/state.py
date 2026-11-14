@@ -1,1128 +1,905 @@
-from parser import DFGFeatures, ADGFeatures
-from utils import getDfgAdj, getAdgAdj
+"""CGRA mapping environment with state representation and action validation."""
+
+import copy
+import json
+import logging
+from collections import defaultdict
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
-import random
-import copy
-import numpy as np
-from line_profiler import profile
-import json
-from collections import defaultdict
+try:
+    from line_profiler import profile
+except ImportError:
+    profile = lambda f: f  # no-op
+
+from config import MCTS_CFG, TRAIN_CFG
+from env.mask_manager import MaskManager
+from env.route_manager import RouteManager
+from enums import IO_OPS, NODE_TYPE_GIB, NODE_TYPE_GPE, NODE_TYPE_IOB, SearchMode
+from parser import ADGFeatures, DFGFeatures, getAdgEdgeDegrees
+from utils import getAdgAdj, getDfgAdj
+
+logger = logging.getLogger(__name__)
+
+# ============================================================================
+# Constants
+# ============================================================================
+
+INVALID_ACTION_REWARD = -4000
+ROUTE_FAILURE_PENALTY = -10
+ROUTE_STEP_COST = -0.1
+
+
+def softmax_distance(distances: List[int],
+                     beta: float = 4.0) -> np.ndarray:
+    """Convert distances to a probability distribution via softmax scaling.
+
+    p_i = exp(-beta * d_i) / sum_j exp(-beta * d_j)
+    """
+    arr = np.array(distances, dtype=float)
+    weights = np.exp(-beta * arr)
+    return weights / weights.sum()
+
+
+# ============================================================================
+# Environment
+# ============================================================================
 
 
 class Environment:
-    def __init__(self, dfg, adg, operations, is_heuristic=True):
+    """Manages the DFG→ADG mapping simulation state, masks, and graph features."""
 
-        self.mask = np.ones((adg.getNodeNums(), adg.getMaxNodeId() + 1))
-        self.dfg_mask = np.zeros((adg.getNodeNums(), adg.getMaxNodeId() + 1))
-        self.route_mask = np.zeros(len(adg.getEdges()))
+    def __init__(self, dfg: Any, adg: Any, operations: Any,
+                 is_heuristic: bool = True):
+        self.mask_mgr = MaskManager(adg, dfg)
+        self.route_mgr = RouteManager()
 
         self.dfg = dfg
         self.adg = adg
         self.ops = operations
+
         self.dfgFeatures = DFGFeatures(dfg)
         self.dfg_features = self.dfgFeatures.features
-
         self.dfg_features_vec = self.dfgFeatures.getFeaturesVector(operations)
+
         self.adgFeatures = ADGFeatures(adg)
         self.adg_features = self.adgFeatures.features
         self.adg_features_vec = self.adgFeatures.getFeaturesVector()
+
         self.dfg_adj = getDfgAdj(dfg)
         self.adg_adj = getAdgAdj(adg)
+
+        # P1-2: static one-hot edge-type matrix (used for GNN edge features)
+        self.adg_edge_onehot = self.adgFeatures.getEdgeFeatureMatrix()
+        # P2-2: cached GIB reged map for the timing-aware route penalty
+        self.gib_reged = None
+
+        # P1-6: placement centroid tracking (for resource-spread reward)
+        self.placed_count = 0
+        self.centroid_x = 0.0
+        self.centroid_y = 0.0
+        xs = [n.getX() or 0 for n in adg.getNodes().values()]
+        ys = [n.getY() or 0 for n in adg.getNodes().values()]
+        self.mesh_max_dist = (max(xs) - min(xs)) + (max(ys) - min(ys))
+        self.mesh_max_dist = max(self.mesh_max_dist, 1)
+
         self.init_env = copy.deepcopy((dfg, adg, operations))
-        self.reward = {}
+        self.reward: Dict[int, float] = {}
         self.adg_actions = self.adg.getMaxNodeId() + 1
-        # self.graph_visual = GraphVisual(dfg, adg)
         self.heristic_reward = is_heuristic
 
-        self.route_cur_node = []
-        self.route_cur_edges = {}
-        self.dfg_links = defaultdict(list)
-
-        self._precompute_edge_mappings()
-
-        self.place_cur_node = []
+        self.place_cur_node: List[int] = []
         self.init_mask()
         self.last_action = -1
-        self.route_step = 0
 
-        self._cur_adg_node_id = None
-        self._cur_dfg_node_id = None
+        self._cur_adg_node_id: Optional[int] = None
+        self._cur_dfg_node_id: Optional[int] = None
 
         self.latency = np.zeros(adg.getMaxNodeId() + 1)
         self.dfg_latency = np.zeros(adg.getMaxNodeId() + 1)
 
-    def update(self, action, reward, print_action=False):
-        min_path = []
+    # ========================================================================
+    # Properties delegating to managers (backward-compatible access)
+    # ========================================================================
+
+    @property
+    def mask(self) -> np.ndarray:
+        return self.mask_mgr.mask
+
+    @mask.setter
+    def mask(self, value: np.ndarray) -> None:
+        self.mask_mgr.mask = value
+
+    @property
+    def dfg_mask(self) -> np.ndarray:
+        return self.mask_mgr.dfg_mask
+
+    @dfg_mask.setter
+    def dfg_mask(self, value: np.ndarray) -> None:
+        self.mask_mgr.dfg_mask = value
+
+    @property
+    def route_mask(self) -> np.ndarray:
+        return self.mask_mgr.route_mask
+
+    @route_mask.setter
+    def route_mask(self, value: np.ndarray) -> None:
+        self.mask_mgr.route_mask = value
+
+    @property
+    def route_cur_node(self) -> List[int]:
+        return self.route_mgr.route_cur_node
+
+    @route_cur_node.setter
+    def route_cur_node(self, value: List[int]) -> None:
+        self.route_mgr.route_cur_node = value
+
+    @property
+    def route_cur_edges(self) -> Dict[int, int]:
+        return self.route_mgr.route_cur_edges
+
+    @route_cur_edges.setter
+    def route_cur_edges(self, value: Dict[int, int]) -> None:
+        self.route_mgr.route_cur_edges = value
+
+    @property
+    def dfg_links(self) -> defaultdict:
+        return self.route_mgr.dfg_links
+
+    @dfg_links.setter
+    def dfg_links(self, value: defaultdict) -> None:
+        self.route_mgr.dfg_links = value
+
+    @property
+    def route_step(self) -> int:
+        return self.route_mgr.route_step
+
+    @route_step.setter
+    def route_step(self, value: int) -> None:
+        self.route_mgr.route_step = value
+
+    # ========================================================================
+    # Action handling
+    # ========================================================================
+
+    def update(self, action: int, reward: Dict[int, float],
+               print_action: bool = False) -> bool:
+        """Execute a placement action. Returns True on success."""
         self._set_node_id(action)
-        if self.canMapping(action, reward):
-            self.updateFeatures()
-            self.updateAdj()
-            if print_action:
-                print(
-                    "update current action is {}, {}".format(
-                        self._cur_dfg_node_id, self._cur_adg_node_id
-                    )
-                )
-            self.updateMeta(action)
-            return True
-        else:
-            reward[action] = -4000
+        if not self.canMapping(action, reward):
+            reward[action] = INVALID_ACTION_REWARD
             return False
 
-    def _precompute_edge_mappings(self):
-        """预计算边缘映射关系，加速后续查询"""
-        edges = self.adg.getEdges()
-        self._src_to_edges = {}
-        self._dst_to_src = {}
-        for eid, edge in edges.items():
-            src = edge.getSrcId()
-            dst = edge.getDstId()
-            if src not in self._src_to_edges:
-                self._src_to_edges[src] = []
-            self._src_to_edges[src].append((eid, dst))
-            if dst not in self._dst_to_src:
-                self._dst_to_src[dst] = []
-            self._dst_to_src[dst].append((eid, src))
+        self.updateFeatures()
+        self.updateAdj()
+        if print_action:
+            logger.info("update current action is %d, %d",
+                        self._cur_dfg_node_id, self._cur_adg_node_id)
+        self.updateMeta(action)
+        return True
 
-    def route_update(self, action):
-        """优化后的路由更新函数"""
-        # 1. 获取边的信息
+    def route_update(self, action: int) -> bool:
+        """Execute a route action. Delegates core logic to RouteManager."""
         edges = self.adg.getEdges()
         if action not in edges:
-            print("action is not in adg edges")
-            return False
-
-        edge = edges[action]
-        inN = edge.getSrcId()
-        outN = edge.getDstId()
-
-        # 2. 验证路由条件
-        if not self.route_cur_node:  # 空集检查更高效
-            print("route cur node is empty")
-            return True
-
-        if inN not in self.route_cur_node:
-            print("inN is not equal to route_cur_node")
+            logger.warning("action %d is not in adg edges", action)
             return False
 
         if self.route_mask[action] <= 0:
-            print("action can not be mapped")
+            logger.warning("action %d cannot be mapped (mask)", action)
             return False
 
-        # 3. 执行路由更新 - 通用部分
-        self.route_cur_node.remove(inN)
-        reward = self.get_delay(outN)
+        edge = edges[action]
+        return self.route_mgr.execute_route_step(
+            action=action,
+            edge=edge,
+            mask_mgr=self.mask_mgr,
+            target_node=self.last_action % self.adg_actions,
+            latency=self.latency,
+            dfg_latency=self.dfg_latency,
+            adg_adj=self.adg_adj,
+            adg_features_vec=self.adg_features_vec,
+            last_action=self.last_action,
+            adg_actions=self.adg_actions,
+        )
 
-        # 设置标志以避免重复条件评估
-        is_terminal = outN == self.last_action % self.adg_actions
-        self.latency[outN] = max(self.latency[inN] + 1, self.latency[outN])
-        self.route_cur_edges[outN] = self.route_cur_edges[inN]
-        self.latency[inN] = 0
+    # ========================================================================
+    # P2-2: timing-aware routing cost (registered GIB hop penalty)
+    # ========================================================================
 
-        # 4. 根据是否为终点节点执行不同的更新
-        if not is_terminal:
-            # 中间节点处理 - 使用预计算的映射
-            self.route_cur_node.append(outN)
+    def is_registered_hop(self, action: int) -> bool:
+        """True when this ADG edge exits a GIB through a REGISTERED output
+        port (each such hop adds +1 cycle to the true DFG latency).
 
-            # latency[outN] = max(laterncy[inN] + 1, latency[outN])
-            # latency[inN] = 0
-
-            # 获取与outN相关的出边
-            if outN in self._src_to_edges:
-                out_edges_data = self._src_to_edges[outN]
-                valid_out_edges = [
-                    eid for eid, _ in out_edges_data if self.route_mask[eid] >= 0
-                ]
-
-                # 向量化更新route_mask和adg_adj
-                self.route_mask[valid_out_edges] = 1
-                for eid, dst in out_edges_data:
-                    if eid in valid_out_edges:
-                        self.adg_adj[outN, dst] = 1
-
-            # 获取与inN相关的出边
-            if inN in self._src_to_edges:
-                in_edges_data = self._src_to_edges[inN]
-                valid_in_edges = [
-                    eid for eid, _ in in_edges_data if self.route_mask[eid] >= 0
-                ]
-
-                # 向量化更新
-                self.route_mask[valid_in_edges] = 0
-                for eid, dst in in_edges_data:
-                    if eid in valid_in_edges:
-                        self.adg_adj[inN, dst] = 0
-
-            # 获取指向inN的边
-            if inN in self._dst_to_src:
-                reversed_edges_data = self._dst_to_src[inN]
-                valid_reversed_edges = [
-                    eid for eid, _ in reversed_edges_data if self.route_mask[eid] >= 0
-                ]
-
-                # 向量化更新
-                self.route_mask[valid_reversed_edges] = 0
-                for eid, src in reversed_edges_data:
-                    if eid in valid_reversed_edges:
-                        self.adg_adj[src, inN] = 0
-
-            # 验证节点类型 - 只在必要时调用
-            if self.adg.getNode(outN).getType() != "GIB":
-                print("{} not GIB\n".format(outN))
-                return False
-
-            # 最后更新当前路由状态
-            self.route_step += 1
-            self.adg_features_vec[outN][4] = outN
-        else:
-            # save the final latency for terminal dst node.
-            self.dfg_latency[self.last_action // self.adg_actions] = self.latency[outN]
-
-        # 共同的最终更新 - 不管是终点还是中间节点
-        self.adg_adj[inN, outN] = 0
-        self.dfg_links[self.route_cur_edges[outN]].append(action)
-        self.route_mask[action] = -1
-
-        return True
-
-    def init_mask(self):
+        Uses the same reged map as the in-process latency evaluator
+        (utils.latency_eval.build_gib_reged), so the RL routing signal
+        aligns exactly with the metric being optimized.
         """
-        Initialize masks for DFG (Data Flow Graph) and ADG (Architecture Description Graph) mapping.
-        The function sets up mapping constraints between DFG nodes and ADG nodes based on their types.
+        if TRAIN_CFG.registered_hop_penalty <= 0:
+            return False
+        if self.gib_reged is None:
+            from utils.latency_eval import build_gib_reged
+            self.gib_reged = build_gib_reged(self.adg)
+        edge = self.adg.getEdges().get(action)
+        if edge is None:
+            return False
+        src = edge.getSrcId()
+        port = edge.getSrcPortIdx()
+        return bool(self.gib_reged.get(src, {}).get(port, False))
 
-        The mask is a binary matrix where:
-        - 0 indicates mapping is not allowed
-        - 1 indicates mapping is allowed
-        """
-        # Initialize DFG mask with zeros
-        self.dfg_mask.fill(0)
+    # ========================================================================
+    # Mask initialization
+    # ========================================================================
 
-        # Set mask=1 for nodes with no incoming edges and specific feature
-        zero_incoming = np.where(
-            (np.all(self.dfg_adj == 0, axis=0)) & (self.dfg_features_vec[:, 6] == -1)
-        )[0]
-        self.dfg_mask[zero_incoming, :] = 1
-        self.place_cur_node.extend(zero_incoming)
+    def init_mask(self) -> None:
+        """Initialize masks constraining DFG↔ADG node mappings."""
+        self.place_cur_node = self.mask_mgr.init_mask(
+            self.dfg_features_vec, self.dfg_adj, self.place_cur_node)
 
-        # Get all GIB nodes from ADG and disable their mappings
-        gib_nodes = [
-            node_id
-            for node_id, node in self.adg.getNodes().items()
-            if node.getType() == "GIB"
-        ]
-        self.mask[:, gib_nodes] = 0
+    def init_route_mask(self) -> None:
+        self.mask_mgr.init_route_mask()
 
-        # Get INPUT/OUTPUT nodes from DFG
-        io_nodes = [
-            node.id
-            for node in self.dfg.getNodes()
-            if node.getOpCode() in ("INPUT", "OUTPUT", "input", "output")
-        ]
+    # ========================================================================
+    # Feature and adjacency updates
+    # ========================================================================
 
-        # Get GPE nodes from ADG
-        gpe_nodes = [
-            node.getId()
-            for node in self.adg.getNodes().values()
-            if node.getType() == "GPE"
-        ]
+    def updateFeatures(self) -> None:
+        dfg_id = self._cur_dfg_node_id
+        adg_id = self._cur_adg_node_id
 
-        # Disable mapping between INPUT/OUTPUT nodes and GPE nodes
-        for dfg_id in io_nodes:
-            self.mask[dfg_id, gpe_nodes] = 0
+        self.mask_mgr.clear_placement_rows_cols(dfg_id, adg_id)
 
-        # Get computation nodes (non-INPUT/OUTPUT) from DFG
-        comp_nodes = [
-            node.id
-            for node in self.dfg.getNodes()
-            if node.getOpCode() not in ("INPUT", "OUTPUT", "input", "output")
-        ]
-
-        # Get IOB nodes from ADG
-        iob_nodes = [
-            node.getId()
-            for node in self.adg.getNodes().values()
-            if node.getType() == "IOB"
-        ]
-
-        # Disable mapping between computation nodes and IOB nodes
-        for dfg_id in comp_nodes:
-            self.mask[dfg_id, iob_nodes] = 0
-
-        # print("Mask initialization completed successfully")
-
-    def init_route_mask(self):
-        self.route_mask = np.zeros(len(self.adg.getEdges()))
-
-    def getAct(self, action):
-        return action // self.adg_actions, action % self.adg_actions
-
-    # def updateFeatures(self, action):
-    #     dfg_act = self._get_dfg_node_id(action)
-    #     adg_act = self._get_adg_node_id(action)
-    #     self.mask[dfg_act, :] = 0
-    #     self.mask[:, adg_act] = 0
-    #     self.dfg_mask[dfg_act, :] = 0
-    #     # print("update features dfg {} adg {}".format(dfg_act, adg_act))
-
-    #     if self.adg.getNodes()[adg_act].getType() != "GIB":
-    #         self.adg_features_vec[adg_act][4] = dfg_act
-    #     else:
-    #         print("gib error!")
-    #     self.dfg_features_vec[dfg_act][6] = adg_act
-
-    #     self.dfg_features_vec[dfg_act][3] = len(self.dfg_adj[:, dfg_act])
-    #     self.adg_features_vec[adg_act][2] = self.adg.getNodes()[adg_act].getNumInputs()
-    #     self.adg_features_vec[adg_act][3] = self.adg.getNodes()[adg_act].getNumOutputs()
-    def updateFeatures(self):
-        """
-        Update features for both DFG and ADG nodes after an action is taken.
-
-        Args:
-            action (int): Combined action value encoding both DFG and ADG nodes
-
-        Updates:
-        - Node mappings in feature vectors
-        - Input/output counts
-        - Masks for both DFG and ADG
-
-        Raises:
-            ValueError: If attempting to map to a GIB node
-        """
-        # Extract node IDs
-        dfg_node_id = self._cur_dfg_node_id
-        adg_node_id = self._cur_adg_node_id
-
-        # Update mapping masks
-        self._update_masks(dfg_node_id, adg_node_id)
-
-        # Update node mappings
-        self._update_node_mappings(dfg_node_id, adg_node_id)
-
-        # Update connectivity features
-        self._update_connectivity_features(dfg_node_id, adg_node_id)
-
-    def _update_masks(self, dfg_node_id, adg_node_id):
-        """
-        Update masks to prevent further mapping of used nodes.
-        """
-        # Disable all mappings for these nodes
-        self.mask[dfg_node_id, :] = 0  # Disable row
-        self.mask[:, adg_node_id] = 0  # Disable column
-        self.dfg_mask[dfg_node_id, :] = 0  # Disable DFG mask row
-
-    def _update_node_mappings(self, dfg_node_id, adg_node_id):
-        """
-        Update the node mapping information in feature vectors.
-
-        Raises:
-            ValueError: If attempting to map to a GIB node
-        """
-        adg_node = self.adg.getNodes()[adg_node_id]
-
-        # Verify node type and update mappings
-        if adg_node.getType() == "GIB":
+        adg_node = self.adg.getNodes()[adg_id]
+        if adg_node.getType() == NODE_TYPE_GIB:
             raise ValueError("Cannot map to GIB node!")
 
-        # Update bidirectional mapping between DFG and ADG nodes
-        self.adg_features_vec[adg_node_id][4] = dfg_node_id  # ADG -> DFG mapping
-        self.dfg_features_vec[dfg_node_id][6] = adg_node_id  # DFG -> ADG mapping
+        self.adg_features_vec[adg_id][4] = dfg_id
+        self.dfg_features_vec[dfg_id][6] = adg_id
+        self.dfg_features_vec[dfg_id][3] = len(self.dfg_adj[:, dfg_id])
+        self.adg_features_vec[adg_id][2] = adg_node.getNumInputs()
+        self.adg_features_vec[adg_id][3] = adg_node.getNumOutputs()
 
-    def _update_connectivity_features(self, dfg_node_id, adg_node_id):
-        """
-        Update input/output connectivity features for both DFG and ADG nodes.
-        """
-        adg_node = self.adg.getNodes()[adg_node_id]
+        # P1-6: track running centroid for the resource-spread reward
+        self.placed_count += 1
+        self.centroid_x += adg_node.getX() or 0
+        self.centroid_y += adg_node.getY() or 0
 
-        # Update DFG node connectivity
-        self.dfg_features_vec[dfg_node_id][3] = len(self.dfg_adj[:, dfg_node_id])
+    def updateAdj(self) -> None:
+        dfg_id = self._cur_dfg_node_id
+        adg_id = self._cur_adg_node_id
 
-        # Update ADG node connectivity
-        self.adg_features_vec[adg_node_id][2] = adg_node.getNumInputs()
-        self.adg_features_vec[adg_node_id][3] = adg_node.getNumOutputs()
+        connected = self.dfg_adj[dfg_id] == 1
+        self.dfg_adj[dfg_id, connected] = -1
+        connected = self.adg_adj[adg_id] == 1
+        self.adg_adj[adg_id, connected] = -1
 
-    def updateAdj(self):
-        """
-        Process an action and update the adjacency matrices and masks accordingly.
+        self.mask_mgr.activate_ready_nodes(self.dfg_adj, self.dfg_features_vec)
+        # activate_ready_nodes only sets dfg_mask; the action list is built from
+        # place_cur_node, which updateMeta fills from the *successor* row that
+        # updateAdj has just rewritten to -1. A node that becomes ready through
+        # the adjacency column (e.g. the consumer of a recurrence, whose
+        # predecessor is now placed) would therefore never enter the action list
+        # -- measured on dfg_acc: dfg_mask[ADD] = 323 but place_cur_node = [].
+        for _n in range(self.dfg_mask.shape[0]):
+            if self.dfg_mask[_n].sum() > 0 and _n not in self.place_cur_node:
+                self.place_cur_node.append(_n)
 
-        Args:
-            action (int): Combined action value encoding both DFG and ADG actions
-
-        The function:
-        1. Splits the combined action into DFG and ADG components
-        2. Updates adjacency matrices
-        3. Updates masks based on new graph state
-        """
-        # Split combined action into DFG and ADG components
-        dfg_action = self._cur_dfg_node_id
-        adg_action = self._cur_adg_node_id
-
-        # Update DFG adjacency matrix
-        # Find nodes connected to dfg_action node and mark them as processed (-1)
-        dfg_connected_nodes = self.dfg_adj[dfg_action] == 1
-        self.dfg_adj[dfg_action, dfg_connected_nodes] = -1
-
-        # Update ADG adjacency matrix similarly
-        adg_connected_nodes = self.adg_adj[adg_action] == 1
-        self.adg_adj[adg_action, adg_connected_nodes] = -1
-
-        # Update masks for nodes with all incoming edges processed
-        # Find nodes where all incoming edges are <= 0 and have feature[6] == -1
-        ready_nodes = np.where(
-            (np.all(self.dfg_adj <= 0, axis=0)) & (self.dfg_features_vec[:, 6] == -1)
-        )[0]
-
-        # Enable these nodes in the mask
-        self.dfg_mask[ready_nodes, :] = 1
-
-        return self.dfg_mask.copy()
-
-    def isLegalAction(self, action):
-        """
-        Check if a given action is legal based on DFG and ADG constraints.
-
-        Args:
-            action (int): Combined action value encoding both DFG and ADG actions
-
-        Returns:
-            bool: True if the action is legal, False otherwise
-
-        Validates:
-        1. Mask compatibility
-        2. Node type restrictions
-        3. Operation code compatibility
-        """
-        # Decompose action into DFG and ADG components
-        dfg_action = action // self.adg_actions
-        adg_action = action % self.adg_actions
-
-        # Get node information
-        adg_node = self.adg.getNode(adg_action)
-        dfg_node = self.dfg.getNodes()[dfg_action]
-
-        # Check mask constraint
-        if self.mask[dfg_action, adg_action] == 0:
-            return False
-
-        # Check node type constraints
-        node_type = adg_node.getType()
-        op_code = dfg_node.getOpCode()
-
-        # GIB nodes are not valid targets
-        if node_type == "GIB":
-            return False
-
-        # IOB nodes can only map to INPUT/OUTPUT operations
-        if node_type == "IOB":
-            return op_code in ("INPUT", "OUTPUT", "input", "output")
-
-        # GPE nodes cannot map to INPUT/OUTPUT operations
-        if node_type == "GPE":
-            return op_code not in ("INPUT", "OUTPUT", "input", "output")
-
-        return True
-
-    def canMapping(self, action, reward):
-        dfg_act = action // self.adg_actions
-        adg_act = action % self.adg_actions
-        if self.mask[dfg_act, adg_act] != 1 or self.dfg_mask[dfg_act, adg_act] != 1:
-            return False
-
-        # print("test action is {}, {}".format(dfg_act, adg_act))
-
-        if self.mask[dfg_act, adg_act] == 1 and self.dfg_mask[dfg_act, adg_act] == 1:
-
-            # sum_cost = self.adg.getNode(adg_act).getMaxDelay()
-            sum_cost = self.get_delay(adg_act)
-
-            for src in range(self.dfg_adj.shape[0]):
-                if self.dfg_adj[src, dfg_act] == 0:
-                    continue
-                src_mapped_pe = self.dfg_features_vec[src][6]
-                if src_mapped_pe == -1:
-                    print("src {} is not mapped".format(src))
-                    return False
-                dst_mapped_pe = action % self.adg_actions
-                if not self.heristic_reward:
-                    # print("src {}, dst {}".format(src_mapped_pe, dst_mapped_pe))
-                    cur_path = []
-                    cost = 0
-                    # path = []
-                    min_cost = 100000000
-                    path_cost = self.calculateCost(
-                        src_mapped_pe, dst_mapped_pe
-                    )  # heruistic reward
-
-                    # path_cost = self.findPath(
-                    #     src_mapped_pe,
-                    #     dst_mapped_pe,
-                    #     cost,
-                    #     min_cost,
-                    #     max_cost * 2,
-                    #     cur_path,
-                    #     path,
-                    #     0,
-                    # )
-                else:
-                    # print("a star reward")
-                    path_cost = self.calculateCost(src_mapped_pe, dst_mapped_pe)
-                # print("path cost is {}".format(path_cost))
-                if path_cost < 0:
-                    return False
-                sum_cost += path_cost
-            # update dfg environment
-            # for src in self.dfg_adj[:, action // self.adg_actions]:
-            #     # self.dfg_adj[src, action // self.adg_actions] = 0
-            #     self.dfg_features[src].out_degree -= 1
-            #     self.dfg_features[src].mapped_pe_id = action % self.adg_actions
-            # print("sum cost is {}".format(sum_cost))
-            reward[action] = -sum_cost
-            return True
-        return False
-
-    def findPath(self, src, dst, cost, min_cost, max_cost, path, min_path, d):
-        # if self.adg_adj[src,dst] == 0:
-        #     return -1
-        # print("{}: src {} dst {}".format(d, src,dst))
-        path_cost = 100000000
-        min_src = 0
-        min_dst = 0
-        if cost > max_cost:
-            return -1
-        path.append(src)
-
-        if src == dst:
-            if cost < min_cost:
-                # print("update cost {}".format(cost))
-                min_cost = cost
-                min_path = path
-        else:
-            for mid_dst in range(len(self.adg_adj[src, :])):
-                if self.adg.getNode(mid_dst) == None:
-                    continue
-
-                # print(mid_dst)
-                if self.adg.getNode(mid_dst).getType() != "GIB" and mid_dst != dst:
-                    continue
-                # if mid_dst == dst:
-                #     print("{} cur type is {}".format(mid_dst,self.adg.getNode(mid_dst).getType()))
-                if self.adg_adj[src, mid_dst] != 0:
-                    # temp = port
-                    # print("cur type is {}".format(self.adg.getNode(mid_dst).getType()))
-                    self.adg_adj[src, mid_dst] = 0
-                    self.adg_adj[mid_dst, src] = 0
-                    # self.adg_adj[mid_dst, src] = 0
-
-                    mid_delay = self.get_delay(mid_dst)
-
-                    if mid_delay == None:
-                        mid_delay = 1
-                    path_cost = self.findPath(
-                        mid_dst,
-                        dst,
-                        cost + mid_delay,
-                        min_cost,
-                        max_cost,
-                        path,
-                        min_path,
-                        d + 1,
-                    )
-
-                    # self.adg_adj[src,mid_dst] = 1
-                    # self.adg_adj[mid_dst, src] = 1
-        path.pop()
-        if path_cost == 100000000:
-            return -1
-        return min_cost
-
-    def calculateCost(self, src, dst):
-        src_node = self.adg.getNodes()[src]
-        dst_node = self.adg.getNodes()[dst]
-        # if src_node.getType() == "GIB" or dst_node.getType() == "GIB":
-        #     return 0
-        src_x = src_node.getX()
-        src_y = src_node.getY()
-        dst_x = dst_node.getX()
-        dst_y = dst_node.getY()
-        ct = 0
-        # if src_node.getType() != "GIB" and dst_node.getType() != "GIB":
-        #     ct = 1
-        return abs(src_x - dst_x) + abs(src_y - dst_y) - ct
-
-    def get_delay(self, adg_act):
-        mid_type = self.adg_features_vec[adg_act][1]
-        if mid_type == 2:
-            return 1
-        elif mid_type == 0:
-            return 2
-        else:
-            return 3
-
-    def updateMeta(self, action):
-        """
-        Update metadata after a node mapping action, including:
-        - Current placement node tracking
-        - Route node predecessors identification
-
-        Args:
-            action (int): The current action being processed
-
-        Updates:
-        - place_cur_node: Tracks current placement node
-        - route_cur_node: List of predecessor nodes that need routing
-        """
-        # Get current DFG and ADG node IDs
-        dfg_node_id = self._cur_dfg_node_id
-        adg_node_id = self._cur_adg_node_id
-
-        # Update current placement node
+    def updateMeta(self, action: int) -> None:
+        dfg_id = self._cur_dfg_node_id
         self.last_action = action
 
-        # Find predecessor adg nodes that need routing
-        predecessor_nodes, predecessor_dfg_nodes = self.find_predecessor_nodes(
-            dfg_node_id
+        pre_adg, pre_dfg = self.find_predecessor_nodes(dfg_id)
+        succ = self.find_successors_nodes(dfg_id)
+
+        self.place_cur_node.remove(dfg_id)
+
+        if pre_adg:
+            self.route_mgr.route_cur_node = pre_adg
+            for pre, pre_node in zip(pre_dfg, pre_adg):
+                self.route_mgr.route_cur_edges[pre_node] = self.dfg.findEdge(pre, dfg_id)
+
+            self.mask_mgr.activate_route_edges_for_sources(pre_adg, self.adg.getEdges())
+
+        if succ:
+            self.place_cur_node.extend(succ)
+
+    # ========================================================================
+    # Legality checks
+    # ========================================================================
+
+    def isLegalAction(self, action: int) -> bool:
+        dfg_id = action // self.adg_actions
+        adg_id = action % self.adg_actions
+
+        if self.mask[dfg_id, adg_id] == 0:
+            return False
+
+        adg_node = self.adg.getNode(adg_id)
+        node_type = adg_node.getType()
+        op_code = self.dfg.getNodes()[dfg_id].getOpCode()
+
+        if node_type == NODE_TYPE_GIB:
+            return False
+        if node_type == NODE_TYPE_IOB:
+            return op_code in IO_OPS
+        if node_type == NODE_TYPE_GPE:
+            return op_code not in IO_OPS
+        return True
+
+    def canMapping(self, action: int, reward: Dict[int, float]) -> bool:
+        dfg_id = action // self.adg_actions
+        adg_id = action % self.adg_actions
+
+        if self.mask[dfg_id, adg_id] != 1 or self.dfg_mask[dfg_id, adg_id] != 1:
+            return False
+
+        sum_cost = self.get_delay(adg_id)
+
+        for src in range(self.dfg_adj.shape[0]):
+            if self.dfg_adj[src, dfg_id] == 0:
+                continue
+
+            src_pe = self.dfg_features_vec[src][6]
+            if src_pe == -1:
+                logger.warning("src %d is not mapped", src)
+                return False
+
+            dst_pe = adg_id
+            # Both heuristic and exact use Manhattan distance as cost heuristic
+            path_cost = self.calculateCost(src_pe, dst_pe)
+
+            if path_cost < 0:
+                return False
+            sum_cost += path_cost
+
+        reward[action] = -sum_cost
+        return True
+
+    # ========================================================================
+    # Cost / distance
+    # ========================================================================
+
+    _cost_cache: Dict[Tuple[int, int], int] = None
+
+    def calculateCost(self, src: int, dst: int) -> int:
+        """Manhattan distance between two ADG node coordinates (memoized)."""
+        if self._cost_cache is None:
+            self._cost_cache = {}
+        key = (src, dst)
+        if key in self._cost_cache:
+            return self._cost_cache[key]
+        src_node = self.adg.getNodes()[src]
+        dst_node = self.adg.getNodes()[dst]
+        cost = (abs(src_node.getX() - dst_node.getX()) +
+                abs(src_node.getY() - dst_node.getY()))
+        self._cost_cache[key] = cost
+        return cost
+
+    def get_delay(self, adg_id: int) -> int:
+        mid_type = self.adg_features_vec[adg_id][1]
+        if mid_type == 2:
+            return 1
+        if mid_type == 0:
+            return 2
+        return 3
+
+    # ========================================================================
+    # Graph queries
+    # ========================================================================
+
+    def find_predecessor_nodes(self, dfg_id: int) -> Tuple[List[int], np.ndarray]:
+        pre_indices = np.where(abs(self.dfg_adj[:, dfg_id]) == 1)[0]
+        pre_adg = [int(self.dfg_features_vec[i, 6]) for i in pre_indices]
+        return pre_adg, pre_indices
+
+    def find_successors_nodes(self, dfg_id: int) -> List[int]:
+        indices = np.abs(self.dfg_adj[dfg_id, :]) == 1
+        succ = np.arange(self.dfg_adj.shape[1])[indices]
+        col_ready = (self.dfg_adj[:, succ] <= 0).all(axis=0) & (
+            self.dfg_features_vec[succ, 6] == -1
         )
+        return succ[col_ready].tolist()
 
-        # Find successor dfg nodes that need placing
-        successor_nodes = self.find_successors_nodes(dfg_node_id)
-        # Remove current node from current placement nodes
-        self.place_cur_node.remove(dfg_node_id)
+    # ========================================================================
+    # Action encoding / decoding
+    # ========================================================================
 
-        # Update routing nodes if predecessors exist
-        if predecessor_nodes:
-            self.route_cur_node = predecessor_nodes
-            for pre, pre_node in zip(predecessor_dfg_nodes, predecessor_nodes):
-                eid = self.dfg.findEdge(pre, dfg_node_id)
-                self.route_cur_edges[pre_node] = eid
-            edges = self.adg.getEdges()
-            src_ids, edge_ids = np.array(
-                [(edge.getSrcId(), id) for id, edge in edges.items()]
-            ).T
+    def getAct(self, action: int) -> Tuple[int, int]:
+        return action // self.adg_actions, action % self.adg_actions
 
-            pre_set = set(predecessor_nodes)
-            mask = np.isin(src_ids, list(pre_set))
-            self.route_mask[edge_ids[mask]] = 1
+    def _set_node_id(self, action: int) -> None:
+        self._cur_adg_node_id = action % self.adg_actions
+        self._cur_dfg_node_id = action // self.adg_actions
 
-        # Update placing nodes if no predecessors
-        if successor_nodes:
-            self.place_cur_node.extend(successor_nodes)
+    def get_cur_adg_node_id(self) -> Optional[int]:
+        return self._cur_adg_node_id
 
-    def find_predecessor_nodes(self, dfg_node_id):
-        """
-        Find all predecessor nodes in DFG that have edges to the current node.
+    def get_cur_dfg_node_id(self) -> Optional[int]:
+        return self._cur_dfg_node_id
 
-        Args:/
-            dfg_node_id (int): Current DFG node ID
+    def get_adg_node_id(self, action: int) -> int:
+        return action % self.adg_actions
 
-        Returns:
-            list[int]: List of ADG node IDs for predecessors that need routing
-        """
-        # Get indices of nodes that have edges to /current node
-        predecessor_indices = np.where(abs(self.dfg_adj[:, dfg_node_id]) == 1)[0]
+    def get_dfg_node_id(self, action: int) -> int:
+        return action // self.adg_actions
 
-        # Map these DFG nodes to their corresponding ADG nodes using feature vector
-        predecessor_adg_nodes = [
-            int(self.dfg_features_vec[i, 6]) for i in predecessor_indices
-        ]
+    def get_key(self) -> bytes:
+        return self.dfg_features_vec.tobytes()
 
-        return predecessor_adg_nodes, predecessor_indices
+    # ========================================================================
+    # Lifecycle
+    # ========================================================================
 
-    def find_successors_nodes(self, dfg_node_id):
-        """
-        Find all successor nodes in DFG that have edges to the current node.
-        Args:
-            dfg_node_id (int): Current DFG node ID
-        Returns:
-            list[int]: List of ADG node IDs for successors that need routing
-        """
-        # Get indices of nodes that have edges to current node
-        indices = np.abs(self.dfg_adj[dfg_node_id, :]) == 1
-        successor_indices = np.arange(self.dfg_adj.shape[1])[indices]
+    def reset(self) -> None:
+        self.mask_mgr.reset()
+        self.route_mgr.reset()
+        self._cost_cache = None  # invalidate
 
-        # Filter successors based on column condition
-        # A successor is valid if all values in its column are <= 0
-        column_conditions = (self.dfg_adj[:, successor_indices] <= 0).all(axis=0) & (
-            self.dfg_features_vec[successor_indices, 6] == -1
-        )
+        self.dfgFeatures = DFGFeatures(self.init_env[0])
+        self.dfg_features = self.dfgFeatures.features
+        self.dfg_features_vec = self.dfgFeatures.getFeaturesVector(self.init_env[2])
 
-        return successor_indices[column_conditions].tolist()
+        self.adgFeatures = ADGFeatures(self.init_env[1])
+        self.adg_features = self.adgFeatures.features
+        self.adg_features_vec = self.adgFeatures.getFeaturesVector()
 
-    def reset(self):
-        self.mask = np.ones((self.adg.getNodeNums(), self.adg.getMaxNodeId() + 1))
-        self.dfg_mask = np.zeros((self.adg.getNodeNums(), self.adg.getMaxNodeId() + 1))
-        self.route_mask = np.zeros(len(self.adg.getEdges()))
-        self.dfgDeatures = DFGFeatures(self.init_env[0])
-        self.dfg_features = self.dfgDeatures.features
-
-        self.dfg_features_vec = self.dfgDeatures.getFeaturesVector(self.init_env[2])
-        self.adgDeatures = ADGFeatures(self.init_env[1])
-        self.adg_features = self.adgDeatures.features
-        self.adg_features_vec = self.adgDeatures.getFeaturesVector()
         self.dfg_adj = getDfgAdj(self.init_env[0])
         self.adg_adj = getAdgAdj(self.init_env[1])
-        self.route_cur_node = []
+
+        # P1-2: edge features are static (types do not change on reset)
+        self.adg_edge_onehot = self.adgFeatures.getEdgeFeatureMatrix()
+
+        # P1-6: reset placement centroid
+        self.placed_count = 0
+        self.centroid_x = 0.0
+        self.centroid_y = 0.0
+
         self.place_cur_node = []
         self.last_action = -1
         self.init_mask()
         self.init_route_mask()
 
-    def draw(self):
-        """draw the environment"""
-        pass
-        # self.graph_visual.draw()
+    # ========================================================================
+    # Copy semantics (memory optimization)
+    # ========================================================================
 
-    def _set_node_id(self, action):
+    def __deepcopy__(self, memo):
+        """Cheap deep copy: share immutable graph structures, copy only the
+        mutable simulation state.
+
+        The mapping process never mutates the DFG/ADG/Operations graph
+        objects (verified: reged maps stay identical across episodes); it
+        only writes to the numpy feature/adjacency arrays and the
+        managers. Sharing the graph objects cuts every MappingState copy
+        (MCTS per-iteration, collection buffer) from ~1-3 MB to ~100 KB.
         """
-        Extract ADG/DFG node ID from a combined action value.
+        new = type(self).__new__(type(self))
+        memo[id(self)] = new
 
-        Args:
-            action (int): Combined action value
-        """
-        self._cur_adg_node_id = action % self.adg_actions
-        self._cur_dfg_node_id = action // self.adg_actions
+        # Shared (immutable during mapping)
+        new.dfg = self.dfg
+        new.adg = self.adg
+        new.ops = self.ops
+        new.init_env = self.init_env
+        new.dfgFeatures = self.dfgFeatures
+        new.adgFeatures = self.adgFeatures
+        new.dfg_features = self.dfg_features
+        new.adg_features = self.adg_features
+        new.mesh_max_dist = self.mesh_max_dist
+        new.adg_actions = self.adg_actions
+        new.heristic_reward = self.heristic_reward
+        new.gib_reged = self.gib_reged
+        new._cost_cache = self._cost_cache
 
-    def get_cur_adg_node_id(self):
-        return self._cur_adg_node_id
+        # Mutable simulation state — copied
+        new.mask_mgr = copy.deepcopy(self.mask_mgr, memo)
+        new.route_mgr = copy.deepcopy(self.route_mgr, memo)
+        new.dfg_features_vec = self.dfg_features_vec.copy()
+        new.adg_features_vec = self.adg_features_vec.copy()
+        new.dfg_adj = self.dfg_adj.copy()
+        new.adg_adj = self.adg_adj.copy()
+        new.adg_edge_onehot = self.adg_edge_onehot.copy()
+        new.latency = self.latency.copy()
+        new.dfg_latency = self.dfg_latency.copy()
+        new.place_cur_node = list(self.place_cur_node)
+        new.placed_count = self.placed_count
+        new.centroid_x = self.centroid_x
+        new.centroid_y = self.centroid_y
+        new.last_action = self.last_action
+        new._cur_adg_node_id = self._cur_adg_node_id
+        new._cur_dfg_node_id = self._cur_dfg_node_id
+        new.reward = {}
+        return new
 
-    def get_cur_dfg_node_id(self):
-        return self._cur_dfg_node_id
 
-    def get_adg_node_id(self, action):
-        """
-        Extract ADG node ID from a combined action value.
-
-        Args:
-            action (int): Combined action value
-
-        Returns:
-            int: ADG node ID
-        """
-        return action % self.adg_actions
-
-    def get_dfg_node_id(self, action):
-        """
-        Extract DFG node ID from a combined action value.
-        Args:
-            action (int): Combined action value
-        Returns:
-            int: DFG node ID
-        """
-        return action // self.adg_actions
-
-    def get_key(self):
-        """env key for mcts state cache"""
-        return self.dfg_features_vec.tobytes()
+# ============================================================================
+# MappingState
+# ============================================================================
 
 
 class MappingState:
-    def __init__(self, env, action=None):
-        super().__init__()
-        # fixme: wrong assginment for last action
-        # self.last_action = env.place_cur_node[0]
-        # self.route_cur_node = env.route_cur_node
+    """Snapshot of the mapping environment used by MCTS tree search."""
+
+    def __init__(self, env: Environment, action: Optional[int] = None):
         self.env = copy.deepcopy(env)
-        # self.dfg_mask = {}
-        # self.adg_mask = {}
-        self.mask = (
-            self.env.mask
-        )  # np.zeros((len(env.dfg.getNodes()), env.adg_actions))
+        # mask is a view into env's mask (shared for efficiency)
+        self.mask = self.env.mask
         self.route_mask = self.env.route_mask
-
-        # self.dfg_features = DFGFeatures(env.dfg)
-        # self.dfg_features_vec = self.dfg_features.getFeaturesVector(env.ops)
-        # self.adg_features = ADGFeatures(env.adg)
-        # self.adg_features_vec = self.adg_features.getFeaturesVector()
-        # self.init_mask()
-        # self.dfg_adj = getDfgAdj(env.dfg)
-        # self.adg_adj = getAdgAdj(env.adg)
-        self.reward = {}
-        # self.action_map = {}
-        self.sum_reward = 0
-        self.sum_route_reward = 0
+        self.reward: Dict[int, float] = {}
+        self.sum_reward = 0.0
+        self.last_reward = 0.0
+        # P1-6: accumulated dense shaping (excluded from the final clean reward)
+        self.shaping_total = 0.0
         self.mapping_state = True
-
         self.actions = self.get_actions()
         self.route_actions = self.get_route_actions()
+        self.mode = SearchMode.PLACEMENT
 
-        self.mode = "placement"
-        # self.plot = plt.subplots()
+    def clone(self) -> 'MappingState':
+        """Create a deep copy for MCTS tree search.
 
-    def clone(self):
-        new_state = copy.deepcopy(self)
+        Optimized: avoids re-copying large immutable structures (dfg, adg, ops)
+        by cloning only the mutable Environment state.
+        """
+        new_state = copy.copy(self)
+        new_state.env = copy.deepcopy(self.env)
+        new_state.env._cost_cache = self.env._cost_cache  # share distance cache
+        new_state.mask = new_state.env.mask
+        new_state.route_mask = new_state.env.route_mask
         new_state.reward = {}
+        # P1-6: copy the shaping accumulator (floats are immutable, += rebinds)
+        new_state.shaping_total = self.shaping_total
+        # Rebuild mutable copies
+        new_state.actions = list(self.actions)
+        new_state.route_actions = list(self.route_actions)
         return new_state
 
-    def init_mask(self):
-        for gib in [
-            node.getId() for node in self.env.adg.getNodes() if node.getType() == "GIB"
-        ]:
-            self.mask[:, gib] = 0
+    # ========================================================================
+    # Terminal / success checks
+    # ========================================================================
 
-        for dfg_id in [
-            node.getId()
-            for node in self.env.dfg.getNodes()
-            if node.getOpCode() == "INPUT"
-            or node.getOpCode() == "OUTPUT"
-            or node.getOpCode() == "input"
-            or node.getOpCode() == "output"
-        ]:
-            for adg_id in [
-                node.getId()
-                for node in self.env.adg.getNodes()
-                if node.getType() == "GPE"
-            ]:
-                self.mask[dfg_id, adg_id] = 0
+    def is_terminal(self) -> bool:
+        if self.mode == SearchMode.PLACEMENT:
+            return (np.all(self.mask <= 0) or
+                    len(self.actions) == 0 or
+                    not self.mapping_state)
+        return (len(self.route_actions) == 0 or
+                not self.mapping_state or
+                np.all(self.env.route_mask <= 0) or
+                len(self.env.route_cur_node) == 0)
 
-        for dfg_id in [
-            node.getId()
-            for node in self.env.dfg.getNodes()
-            if node.getOpCode() != "INPUT"
-            and node.getOpCode() != "OUTPUT"
-            and node.getOpCode() != "input"
-            and node.getOpCode() != "output"
-        ]:
-            for adg_id in [
-                node.getId()
-                for node in self.env.adg.getNodes()
-                if node.getType() == "IOB"
-            ]:
-                self.mask[dfg_id, adg_id] = 0
-
-    def is_terminal(self):
-        if self.mode == "placement":
-            # # print("placement terminal")
-            # if np.all(self.mask <= 0) or (len(self.get_actions()) == 0):
-            #     print("get actions {}".format(len(self.get_actions())))
-            #     print("mapping state {}".format(self.mapping_state))
-            return (
-                np.all(self.mask <= 0)
-                or (len(self.actions) == 0)
-                or self.mapping_state == False
-            )
-        else:
-            # print("route terminal")
-            # if (
-            #     (len(self.get_route_actions()) == 0)
-            #     or self.mapping_state == False
-            #     or np.all(self.env.route_mask <= 0)
-            # ):
-            #     print("get route actions {}".format(len(self.get_route_actions())))
-            #     print("mapping state {}".format(self.mapping_state))
-            #     print("route mask {}".format(len(self.env.route_cur_node)))
-            return (
-                (len(self.route_actions) == 0)
-                or self.mapping_state == False
-                or np.all(self.env.route_mask <= 0)
-                or len(self.env.route_cur_node) == 0
-            )
-
-    def is_route_success(self):
+    def is_route_success(self) -> bool:
         return len(self.env.route_cur_node) == 0 and self.is_terminal()
 
-    def is_route_terminal(self):
-        return np.all(self.env.route_mask == 0) or len(self.get_route_actions()) == 0
+    # ========================================================================
+    # Available actions
+    # ========================================================================
 
-    def get_actions(self):
+    def get_actions(self) -> List[int]:
         actions = []
-
         for i in self.env.place_cur_node:
             if np.any(self.mask[i, :] == 1):
                 for j in range(self.env.adg_actions):
-                    if self.env.adg.getNode(j) != None and self.env.mask[i, j] == 1:
-                        action = i * self.env.adg_actions + j
-                        actions.append(action)
+                    if (self.env.adg.getNode(j) is not None and
+                            self.env.mask[i, j] == 1):
+                        actions.append(i * self.env.adg_actions + j)
             else:
-                print("No any mask >= 0!")
+                logger.warning("No any mask >= 0!")
         return actions
 
-    def get_route_actions(self):
-        """
-        Get valid routing actions based on current node positions and edge constraints.
-        Note: Implementation needs fixing for correct distance calculations between GPE/IOB nodes.
-
-        Returns:
-            list[int]: List of valid edge IDs that can be used for routing
-        """
-        valid_actions = []
-
-        # Return empty list if no current routing nodes
+    def get_route_actions(self) -> List[int]:
         if not self.env.route_cur_node:
-            return valid_actions
+            return []
 
-        # print("Current routing nodes:", self.env.route_cur_node)
-
-        # Get the target node ID from last action
-        target_node_id = self.env.last_action % self.env.adg_actions
-
-        # Iterate through all edges to find valid routing options
+        target = self.env.last_action % self.env.adg_actions
+        valid = []
         for edge_id, edge in self.env.adg.getEdges().items():
-            if self._is_valid_routing_edge(edge_id, edge, target_node_id):
-                valid_actions.append(int(edge_id))
+            if self._is_valid_routing_edge(edge_id, edge, target):
+                valid.append(int(edge_id))
+        return valid
 
-        return valid_actions
+    def get_legal_actions_mask(self, action_dim: int) -> np.ndarray:
+        """Return 1D binary mask [action_dim] for the placement policy net.
 
-    def get_route_action(self, method="random"):
+        Action encoding: action = dfg_id * adg_actions + adg_id.
+        """
+        flat_mask = np.zeros(action_dim, dtype=np.float32)
+        n_dfg = self.env.mask.shape[0]
+        for i in range(n_dfg):
+            base = i * self.env.adg_actions
+            for j in range(self.env.adg_actions):
+                if (self.env.mask[i, j] == 1
+                        and self.env.adg.getNode(j) is not None):
+                    flat_mask[base + j] = 1.0
+        return flat_mask
+
+    def get_legal_route_actions_mask(self, action_dim: int) -> np.ndarray:
+        """Return 1D binary mask [action_dim] for the routing policy net."""
+        route_mask = np.zeros(action_dim, dtype=np.float32)
+        n_edges = min(action_dim, len(self.env.adg.getEdges()))
+        for edge_id in range(n_edges):
+            if edge_id in self.env.route_cur_edges:
+                continue
+            if self.env.route_mask[edge_id] > 0:
+                route_mask[edge_id] = 1.0
+        return route_mask
+
+    def get_route_action(self, method: str = "random") -> int:
         actions = self.get_route_actions()
-        # action_probs = np.zeros(len(self.env.adg.getEdges()))
-        if len(actions) > 0:
-            distances = [self.get_route_distance(action) for action in actions]
-            weights = np.exp(-4 * np.array(distances))
-            # weights = 1 / (np.array(distances)**4 + 1e-5)
+        if not actions:
+            return -1 if self.is_terminal() else -2
 
-            probs = weights / np.sum(weights)
-            # action_probs[actions] = probs
-            if method == "greedy":
-                action = actions[np.argmax(probs)]
-            else:
-                action = np.random.choice(
-                    actions,
-                    p=1.0 * probs
-                    + 0.0 * np.random.dirichlet(0.3 * np.ones(len(probs))),
-                )
-                return action
-        else:
-            if self.is_terminal():
-                # print("WARNING: the state has no route legal actions")
-                return -1
-            # print("WARNING: the state don't need to route actions")
-            return -2
+        distances = [self.get_route_distance(a) for a in actions]
+        probs = softmax_distance(distances)
 
-    def _is_valid_routing_edge(self, edge_id, edge, target_node_id):
-        """
-        Check if an edge is valid for routing based on multiple constraints.
+        if method == "greedy":
+            return actions[np.argmax(probs)]
+        return int(np.random.choice(actions, p=probs))
 
-        Args:
-            edge_id: ID of the edge being checked
-            edge: Edge object containing source and destination information
-            target_node_id: ID of the target node from last action
-
-        Returns:
-            bool: True if the edge is valid for routing, False otherwise
-        """
-        # Basic mask check
+    def _is_valid_routing_edge(self, edge_id: int, edge: Any,
+                                target: int) -> bool:
         if self.env.route_mask[int(edge_id)] != 1:
             return False
-
-        # Source node must be in current routing nodes
         if edge.getSrcId() not in self.env.route_cur_node:
             return False
 
-        # Check distance constraints
-        # src_cost = self.env.calculateCost(edge.getSrcId(), target_node_id)
-        # dst_cost = self.env.calculateCost(target_node_id, edge.getDstId())
-        # if src_cost + 4 <= dst_cost:
-        #     return False
+        dst_type = self.env.adg.getNode(edge.getDstId()).getType()
+        return (dst_type == NODE_TYPE_GIB or
+                (dst_type in (NODE_TYPE_GPE, NODE_TYPE_IOB) and
+                 target == edge.getDstId()))
 
-        # Check destination node type constraints
-        dst_node = self.env.adg.getNode(edge.getDstId())
-        dst_type = dst_node.getType()
-        # Destination must be either:
-        # 1. A GIB node, or
-        # 2. A GPE/IOB node that matches the target node
-        return dst_type == "GIB" or (
-            (dst_type == "GPE" or dst_type == "IOB")
-            and target_node_id == edge.getDstId()
-        )
+    # ========================================================================
+    # Route completion (used by MCTS during tree search)
+    # ========================================================================
 
-    def get_distance(self, cur_action):
+    def complete_routing(self) -> bool:
+        """Complete all routing steps for current placement. Returns True on success.
+
+        Called by MCTS during tree search to fully evaluate placements that
+        require routing.
         """
-        Calculate distance between current action and precedecessor action nodes.
+        self.mode = SearchMode.ROUTE
+        while not self.is_terminal():
+            act = self.get_route_action()
+            if act == -1:
+                return True  # routing complete
+            if act < 0:
+                return False  # routing failed
+            self.take_route_action(act)
+        self.mode = SearchMode.PLACEMENT
+        return True
 
-        Args:
-            cur_action (int): Current action being considered
+    # ========================================================================
+    # Distance / heuristic
+    # ========================================================================
 
-        Returns:
-            int: Distance between nodes, returns 1 if no last action exists
-        """
+    def get_distance(self, action: int) -> int:
+        current = self.env.get_adg_node_id(action)
+        dfg_id = self.env.get_dfg_node_id(action)
 
-        # Extract ADG node IDs from actions
-        current_node_id = self.env.get_adg_node_id(cur_action)
-        current_dfg_id = self.env.get_dfg_node_id(cur_action)
-
-        predecessors, preindices = self.env.find_predecessor_nodes(current_dfg_id)
+        pre_adg, _ = self.env.find_predecessor_nodes(dfg_id)
         distance = 0
 
-        if predecessors == []:
-            # Get the target node ID from last action
-            # print("last action is {}".format(self.env.last_action))
+        if not pre_adg:
             if self.env.last_action == -1:
                 return distance
-            target_node_id = self.env.last_action % self.env.adg_actions
-
-            distance += self.env.calculateCost(current_node_id, target_node_id)
-            # print("no predecessors distance is {}".format(distance))
+            target = self.env.last_action % self.env.adg_actions
+            distance += self.env.calculateCost(current, target)
             return distance
 
-        for pre in predecessors:
-            distance += self.env.calculateCost(pre, current_node_id)
-
+        for pre in pre_adg:
+            distance += self.env.calculateCost(pre, current)
         return distance
 
-    def get_route_distance(self, cur_action):
-        """
-        Calculate routing distance from last node to destination of current edge.
+    def get_route_distance(self, action: int) -> int:
+        dst = self.env.adg.getEdges()[action].getDstId()
+        last = self.env.get_adg_node_id(self.env.last_action)
+        return self.env.calculateCost(last, dst) + 1
 
-        Args:
-            cur_action (int): Current routing action (edge ID)
-
-        Returns:
-            int: Total routing distance plus 1
-        """
-        # Get destination node of the current edge
-        destination_node = self.env.adg.getEdges()[cur_action].getDstId()
-
-        # Get last node ID
-        last_node_id = self.env.get_adg_node_id(self.env.last_action)
-
-        # Calculate total distance (cost to destination + 1)
-        return self.env.calculateCost(last_node_id, destination_node) + 1
+    # ========================================================================
+    # Action execution
+    # ========================================================================
 
     @profile
-    def take_action(self, action, print_action=False):
-        self.mode = "placement"
+    def take_action(self, action: int, print_action: bool = False) -> None:
+        self.mode = SearchMode.PLACEMENT
         if print_action:
-            print(
-                "current action is {}, {}".format(
-                    action // self.env.adg_actions, action % self.env.adg_actions
-                )
-            )
+            logger.info("current action is %d, %d",
+                        action // self.env.adg_actions,
+                        action % self.env.adg_actions)
+
         if not self.env.update(action, self.reward, print_action):
             self.mapping_state = False
-            self.sum_reward -= 10
+            self.sum_reward += ROUTE_FAILURE_PENALTY
         elif self.is_terminal() and (
             self.env.dfg_mask.any() or np.all(self.mask > 0)
-        ):  # FIXME: here condition state is not ture for all case!
+        ):
             self.mapping_state = False
-            self.sum_reward -= 10
+            self.sum_reward += ROUTE_FAILURE_PENALTY
         else:
             self.last_reward = self.sum_reward
-            self.sum_reward += 1
+            # P1-6: dense per-step shaping signal for placement quality
+            shaping = self._compute_intermediate_reward(action)
+            self.shaping_total += shaping
+            self.sum_reward += 1 + shaping
 
         self.env.last_action = action
         self.actions = self.get_actions()
         self.route_actions = self.get_route_actions()
-        # self.sum_reward += self.reward[action]  # add reward to sum_reward
+
+    # ====================================================================
+    # P1-6: Dense step-reward shaping
+    # ====================================================================
+
+    def _compute_intermediate_reward(self, action: int) -> float:
+        """Per-step placement shaping signal (bounded, cheap).
+
+        Three components (weights from ``TRAIN_CFG.step_reward_weights``):
+          - comm_penalty:  -w * mean Manhattan distance to already-placed
+            predecessors (predicts routing hops; aligned with the -0.1/hop
+            ROUTE_STEP_COST scale).
+          - affinity_bonus: +w * fraction of predecessors at distance <= 1.
+          - spread_bonus:  +w * distance from the running placement centroid
+            (normalized by mesh size) to keep PEs spread across the mesh.
+
+        The accumulated total is tracked in ``shaping_total`` and removed from
+        the final reported reward (see :meth:`get_clean_reward`) so benchmark
+        metrics keep their pre-P1-6 semantics.
+        """
+        w = TRAIN_CFG.step_reward_weights
+        if not w:
+            return 0.0
+        env = self.env
+        dfg_id, adg_id = env.get_dfg_node_id(action), env.get_adg_node_id(action)
+        reward = 0.0
+
+        pre_adg, _ = env.find_predecessor_nodes(dfg_id)
+        if len(pre_adg) > 0:
+            dists = np.array([env.calculateCost(p, adg_id) for p in pre_adg],
+                             dtype=np.float64)
+            reward += w.get("comm_penalty", 0.0) * (-float(dists.mean()))
+            reward += w.get("affinity_bonus", 0.0) * float((dists <= 1).mean())
+
+        if env.placed_count > 1:
+            cx = env.centroid_x / env.placed_count
+            cy = env.centroid_y / env.placed_count
+            node = env.adg.getNodes()[adg_id]
+            dist_c = abs((node.getX() or 0) - cx) + abs((node.getY() or 0) - cy)
+            reward += w.get("spread_bonus", 0.0) * (dist_c / env.mesh_max_dist)
+        return float(reward)
 
     @profile
-    def take_route_action(self, action):
-        self.mode = "route"
+    def take_route_action(self, action: int) -> None:
+        self.mode = SearchMode.ROUTE
         if not self.env.route_update(action):
             self.mapping_state = False
-            self.sum_reward -= 10
+            self.sum_reward += ROUTE_FAILURE_PENALTY
         elif self.is_terminal():
             if len(self.env.route_cur_node) > 0:
-                self.sum_reward -= 10
+                self.sum_reward += ROUTE_FAILURE_PENALTY
                 self.mapping_state = False
             else:
                 self.mapping_state = True
-                self.sum_reward -= 0.1
+                self.sum_reward += ROUTE_STEP_COST
+                # P2-2: timing constraint — penalize registered GIB hops
+                if self.env.is_registered_hop(action):
+                    self.sum_reward -= TRAIN_CFG.registered_hop_penalty
         else:
             self.mapping_state = True
-            self.sum_reward -= 0.1
+            self.sum_reward += ROUTE_STEP_COST
+            # P2-2: timing constraint — penalize registered GIB hops
+            if self.env.is_registered_hop(action):
+                self.sum_reward -= TRAIN_CFG.registered_hop_penalty
             self.route_actions = self.get_route_actions()
 
-    def get_dfg_meta(self):
-        dfg_meta = np.zeros_like(self.env.dfg_features_vec)
+    # ========================================================================
+    # Features / metadata
+    # ========================================================================
+
+    def get_dfg_meta(self) -> np.ndarray:
+        meta = np.zeros_like(self.env.dfg_features_vec)
         if self.env.place_cur_node:
-            dfg_meta[self.env.place_cur_node] = self.env.dfg_features_vec[
+            meta[self.env.place_cur_node] = self.env.dfg_features_vec[
                 self.env.place_cur_node
             ]
-        return dfg_meta
+        return meta
 
-    def get_adg_meta(self):
-        adg_meta = np.zeros_like(self.env.adg_features_vec)
+    def get_adg_meta(self) -> np.ndarray:
+        meta = np.zeros_like(self.env.adg_features_vec)
         if self.env.route_cur_node:
-            adg_meta[self.env.route_cur_node] = self.env.adg_features_vec[
+            meta[self.env.route_cur_node] = self.env.adg_features_vec[
                 self.env.route_cur_node
             ]
-        return adg_meta
+        return meta
 
-    def get_reward(self):
+    def get_reward(self) -> float:
         return self.sum_reward
-        # if self.mode == "placement":
-        #     return self.sum_reward
-        # else:
-        #     return self.sum_reward - self.last_reward
 
-    def take_ramdom_action(self):
-        actions = self.get_actions()
-        action = random.choice(actions)
-        self.take_action(action)
+    def get_clean_reward(self) -> float:
+        """Final reward excluding P1-6 dense shaping.
 
-    def get_policy_action(self, policy):
-        action = policy.argmax()
-        return action
+        Keeps the benchmark latency metric (``-sum_reward``) comparable to
+        pre-shaping runs while the shaping still steers MCTS / PPO during
+        training via :meth:`get_reward`.
+        """
+        return self.sum_reward - self.shaping_total
 
-    def draw(self, g_visual):
-        """draw the visual state"""
+    # ========================================================================
+    # Visualization
+    # ========================================================================
 
+    def draw(self, g_visual: Any) -> None:
         g_visual.draw_state(self)
 
-    def start_anime(self, g_visual):
+    def start_anime(self, g_visual: Any) -> None:
         g_visual.draw()
         g_visual.setup_plot()
         g_visual.start_anime(self)
 
-    def end_anime(self, g_visual):
+    def end_anime(self, g_visual: Any) -> None:
         g_visual.draw_state(self)
-
         g_visual.end_anime()
 
-    def dump_config(self, config_path="config.json"):
-        config = {}
+    # ========================================================================
+    # Configuration dump
+    # ========================================================================
 
-        dfg_node_attrs = {}
-        dfg_edge_attrs = {}
-        adg_node_attrs = {}
+    def build_config_dict(self) -> Dict[str, Any]:
+        """Build the simulator config (dfg/adg node & edge attrs) as a dict.
 
-        # get dfg node attr
+        Used by dump_config (file write) and the in-process true-latency
+        evaluator (no temp file / subprocess needed).
+        """
+        config: Dict[str, Any] = {}
+        dfg_node_attrs: Dict[int, Dict] = {}
+        dfg_edge_attrs: Dict[int, Dict] = {}
+        adg_node_attrs: Dict[int, Dict] = {}
+
+        # DFG node attributes
         for node in self.env.dfg.getNodes():
-            id = node.id
-            dfg_node_attrs[id + 1] = {
-                "minLat": self.env.dfg_latency[id],
-                "maxLat": self.env.dfg_latency[id],
-                "lat": self.env.dfg_latency[id],
-                "adgNode": int(self.env.dfg_features_vec[id][6]),
+            node_id = node.id
+            dfg_node_attrs[node_id + 1] = {
+                "minLat": self.env.dfg_latency[node_id],
+                "maxLat": self.env.dfg_latency[node_id],
+                "lat": self.env.dfg_latency[node_id],
+                "adgNode": int(self.env.dfg_features_vec[node_id][6]),
             }
 
+        # DFG edge attributes
         for edge in self.env.dfg.getEdges():
-            id = edge.id
-            srcId, dstId = edge.tail, edge.head
-            # adg_src_id = self.env.dfg_features.vec[srcId][6]
-            # adg_dst_id = self.env.adg_features.vec[dstId][6]
-            lat = self.env.dfg_latency[dstId] - self.env.dfg_latency[srcId]
+            edge_id = edge.id
+            src_id, dst_id = edge.tail, edge.head
+            lat = self.env.dfg_latency[dst_id] - self.env.dfg_latency[src_id]
+            edge_link_attrs: Dict[int, Dict] = {}
 
-            #
-            edge_links = []
-            edge_link_attrs = defaultdict(dict)
-            for e in self.env.dfg_links[id]:
+            for e in self.env.dfg_links[edge_id]:
                 adg_e = self.env.adg.getEdge(e)
                 src_port = adg_e.getSrcPortIdx()
                 dst_port = adg_e.getDstPortIdx()
-                dst_id = adg_e.getDstId()
-                src_id = adg_e.getSrcId()
-                edge_link_attrs[src_id]["dstPort"] = src_port
-                edge_link_attrs[dst_id]["srcPort"] = dst_port
+                edge_link_attrs.setdefault(adg_e.getSrcId(), {})[
+                    "dstPort"] = src_port
+                edge_link_attrs.setdefault(adg_e.getDstId(), {})[
+                    "srcPort"] = dst_port
 
-            dfg_edge_attrs[id] = {
+            dfg_edge_attrs[edge_id] = {
                 "lat": 0,
                 "delay": lat,
                 "vio": 0,
-                "edgeLinks": edge_link_attrs,
+                "edgeLinks": dict(edge_link_attrs),
             }
 
-        # ADG Node Attr
-        for id, node in self.env.adg.getNodes().items():
-            in_ports = {}
-            out_ports = {}
+        # ADG node attributes
+        for node_id, node in self.env.adg.getNodes().items():
+            in_ports: Dict[int, bool] = {}
+            out_ports: Dict[int, bool] = {}
             for eid, edge in self.env.adg.getEdges().items():
-                if edge.getDstId() == id:
+                if edge.getDstId() == node_id:
                     in_ports[edge.getDstPortIdx()] = True
-                if edge.getSrcId() == id:
+                if edge.getSrcId() == node_id:
                     out_ports[edge.getSrcPortIdx()] = True
 
-            adg_node_attrs[id] = {
-                "dfgNode": int(self.env.adg_features_vec[id][4]) + 1,  # dfgNode
+            adg_node_attrs[node_id] = {
+                "dfgNode": int(self.env.adg_features_vec[node_id][4]) + 1,
                 "inPortUsed": in_ports,
                 "outPortUesed": out_ports,
             }
@@ -1132,6 +909,9 @@ class MappingState:
             "dfg_edge_attrs": dfg_edge_attrs,
             "adg_node_attrs": adg_node_attrs,
         }
+        return config
 
+    def dump_config(self, config_path: str = "config.json") -> None:
+        config = self.build_config_dict()
         with open(config_path, "w") as f:
             json.dump(config, f, indent=4)
