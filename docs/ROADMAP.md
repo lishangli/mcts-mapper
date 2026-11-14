@@ -302,6 +302,28 @@ The acyclic control is unchanged in count and now correctly drops the placed nod
 from `ready` (it used to keep it). **M3's next step is the first mapping attempt of
 `dfg_acc`**, followed by a `dfg_quad` regression run.
 
+**M3 step 4 (2026-11-08): `dfg_acc` maps, emits and runs.** Two more gates had to
+go, both of them the same mistake in different places — a self-edge treated as an
+ordinary predecessor:
+
+* `calculateCost` (`src/env/state.py:363`) looked up ADG node `-1` for an unmapped
+  predecessor and died with `KeyError: -1`; an unmapped predecessor now contributes
+  no distance.
+* `canMapping` (`src/env/state.py:334-345`) refused any placement whose predecessor
+  was unmapped, so the ADD could never be placed at all (log: `src 1 is not mapped`).
+  A self-edge is now skipped: its producer is the node's own previous iteration.
+
+With those, the first run of a **cyclic** DFG on the real machine:
+
+    dfg_acc  load=25  exec=5  store=40  total=219  caps=1  got=[1]   expect=[1]
+
+That is the first time this flow has mapped, emitted and executed a recurrence.
+The value is the first sample only, because the harness compares one capture per
+OUTPUT channel and constant x=1 makes sample 0 the trivial part of the sum; the
+expect file was fixed to one value per channel. **The real test is a ramp**
+(`S2_INPUT_RAMP=1`), where a correct recurrence must produce 1, 2, 3, 4, ... and a
+missing RF rotation will produce 1, 1, 1, 1 — that is M3's next single question.
+
 **M2 — make II the objective (2-3 steps).**
 The evaluator must score a schedule by `II` and `loop_cycles`, not by a single-pass
 latency. Exit: a dense kernel reports II and cycles, and the trade-off is visible

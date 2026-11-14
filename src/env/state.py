@@ -338,6 +338,11 @@ class Environment:
         for src in range(self.dfg_adj.shape[0]):
             if self.dfg_adj[src, dfg_id] == 0:
                 continue
+            if src == dfg_id:
+                # a self-edge is a recurrence: the producer is this node's own
+                # previous iteration, so it is neither unmapped nor reachable
+                # (measured: dfg_acc could never place the ADD because of this)
+                continue
 
             src_pe = self.dfg_features_vec[src][6]
             if src_pe == -1:
@@ -368,8 +373,16 @@ class Environment:
         key = (src, dst)
         if key in self._cost_cache:
             return self._cost_cache[key]
-        src_node = self.adg.getNodes()[src]
-        dst_node = self.adg.getNodes()[dst]
+        nodes = self.adg.getNodes()
+        # An unmapped predecessor is reported as -1, which happens for every
+        # recurrence: the node's own previous iteration is not placed yet when its
+        # distance is first evaluated. It contributes no distance (measured:
+        # dfg_acc died with KeyError -1 in calculateCost before this guard).
+        if src not in nodes or dst not in nodes:
+            self._cost_cache[key] = 0
+            return 0
+        src_node = nodes[src]
+        dst_node = nodes[dst]
         cost = (abs(src_node.getX() - dst_node.getX()) +
                 abs(src_node.getY() - dst_node.getY()))
         self._cost_cache[key] = cost

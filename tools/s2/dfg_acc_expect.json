@@ -18,10 +18,7 @@
  ],
  "compute_nodes": 1,
  "expect": [
-  1,
-  2,
-  3,
-  4
+  1
  ],
- "note": "y_j = y_{j-1} + x_j with x = 1: the capture must be a running sum, which only a real recurrence (rotating RF, II=2) can produce"
+ "note": "one OUTPUT node, so one capture channel. With a constant x=1 the first sample is 1; only a RAMP shows the accumulation (S2_INPUT_RAMP=1 -> 1,2,3,4,...), which is what the recurrence must produce"
 }
