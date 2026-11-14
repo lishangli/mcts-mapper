@@ -285,6 +285,50 @@ def as_occ(occ):
     """normalise the optional occ argument (bare tuple/set/None -> empty table)"""
     return occ if isinstance(occ, Occ) else Occ(strict=STRICT_OCC)
 
+_REACH_CACHE = {}
+
+def reachable_pins(src_inst, dst_inst, max_hops=12):
+    """{pin: min hops} reachable from src's PE output with no occupancy.
+
+    A placement can put a producer where a consumer's operand pin has no path at
+    all -- measured on dfg_dot9 (PE 0 -> PE 48: pins 0 and 4 unreachable while the
+    operand group was [4,5,6,7]), and every remap attempt then dies on the same
+    structural failure. Cheap enough to consult before every routing attempt:
+    cached per (src, dst).
+    """
+    key = (src_inst, dst_inst, max_hops)
+    if key in _REACH_CACHE:
+        return _REACH_CACHE[key]
+    out = {}
+    try:
+        terms = set(tuple(p) for p in IW['pe_out'][str(src_inst)])
+        for port, w in IW['pe_in'][str(dst_inst)].items():
+            if not w:
+                continue
+            start = tuple(w)
+            q = deque([(start, 0)])
+            seen = {(start, 0)}
+            while q:
+                (g, p), d = q.popleft()
+                if (g, p) in terms:
+                    out[int(port)] = d
+                    break
+                if d >= max_hops:
+                    continue
+                nd = d + (1 if is_reg(g, p) else 0)
+                if nd > max_hops:
+                    continue
+                for kind, gib, dstport, idx, s in r.preds(g, p):
+                    nxt = s if kind == 'track' else (gib, s)
+                    if (nxt, nd) in seen:
+                        continue
+                    seen.add((nxt, nd))
+                    q.append((nxt, nd))
+    except KeyError:
+        pass
+    _REACH_CACHE[key] = out
+    return out
+
 def path_ok(occ, path, slots=None, slot=None):
     """(index, entry, kind) of the first hop that may NOT be taken, or None.
 
@@ -663,6 +707,16 @@ def route_operand(src_inst, dst_inst, operand, prefer=None, occ=(), used_ports=(
                  else 'congestion' if free_path else 'structurally unroutable'),
         'free_hops': len(free_path) if free_path else None,
     })
+    if not free_pins or not free_path:
+        # Say WHICH pins have no path at all: that is a placement fault, and the
+        # repair needs the fact, not the classification.
+        rp = reachable_pins(src_inst, dst_inst)
+        LAST_ROUTE_FAIL['reachable'] = dict(sorted(rp.items()))
+        LAST_ROUTE_FAIL['unreachable_pins'] = [p for p in group_ports(dst_inst, operand)
+                                               if p not in rp]
+        print('no-path src=%d dst=%d op%d: reachable pins %s, unreachable %s'
+              % (src_inst, dst_inst, operand, sorted(rp),
+                 LAST_ROUTE_FAIL['unreachable_pins']))
     return None, None
 
 OPC = {'PASS': 0, 'ADD': 1, 'SUB': 2, 'MUL': 3}
@@ -1041,16 +1095,34 @@ for attempt in range(int(os.environ.get('S2_ATTEMPTS', '12'))):
                     if None in (ax, ay, bx, by):
                         return 999
                     return abs(ax - bx) + abs(ay - by)
-                cands = [x for x in PEBLK_INV if x not in taken and x != cur
-                         and _md(x, cur) <= 4]
+                # A candidate is only worth trying if EVERY producer can reach at
+                # least one pin of its operand group from there; otherwise the
+                # attempt is a guaranteed structural failure (round 54: PE 0 ->
+                # PE 48 had pins 0 and 4 unreachable, so no retry could help).
+                def _reachable(cand):
+                    cdi = PEBLK_INV[cand]
+                    for e in ins:
+                        if is_stream(e.tail) or e.tail not in placement:
+                            continue
+                        grp = set(group_ports(cdi, opnd_of.get(e.id, 0)))
+                        if not (grp & set(reachable_pins(
+                                PEBLK_INV[placement[e.tail]], cdi))):
+                            return False
+                    return True
+                _all = [x for x in PEBLK_INV if x not in taken and x != cur
+                        and _md(x, cur) <= 4]
+                cands = [x for x in _all if _reachable(x)]
+                _skipped = len(_all) - len(cands)
                 # prefer a position whose distances to the producers repeat, i.e.
                 # where equal-depth routing has a chance
                 def _score(x):
                     ds = [_md(x, p) for p in prod]
                     return (len(ds) - len(set(ds)), sum(ds))
                 cands.sort(key=_score)
-                print('place-repair: node %s cur=%d prod=%s cands=%d'
-                      % (node_by_id[nid].getOpName(), cur, prod, len(cands)))
+                print('place-repair: node %s cur=%d prod=%s cands=%d (skipped %d '
+                      'unreachable)'
+                      % (node_by_id[nid].getOpName(), cur, prod, len(cands),
+                         _skipped))
                 for cand in cands:
                     _moves[0] += 1
                     rewind()
